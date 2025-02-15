@@ -12,12 +12,14 @@ import com.baolong.blpicturebackend.exception.ErrorCode;
 import com.baolong.blpicturebackend.exception.ThrowUtils;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
+import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUpdateRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.model.entity.Picture;
 import com.baolong.blpicturebackend.model.entity.User;
 import com.baolong.blpicturebackend.model.enums.CategoryTagEnum;
+import com.baolong.blpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.baolong.blpicturebackend.model.vo.PictureTagCategory;
 import com.baolong.blpicturebackend.model.vo.PictureVO;
 import com.baolong.blpicturebackend.service.CategoryTagService;
@@ -134,6 +136,8 @@ public class PictureController {
 		long id = pictureUpdateRequest.getId();
 		Picture oldPicture = pictureService.getById(id);
 		ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+		// 补充审核参数
+		pictureService.fillReviewParams(picture, loginUser);
 		// 操作数据库
 		boolean result = pictureService.updateById(picture);
 		ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -220,6 +224,8 @@ public class PictureController {
 		long size = pictureQueryRequest.getPageSize();
 		// 限制爬虫
 		ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+		// 普通用户默认只能查看已过审的数据
+		pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
 		// 查询数据库
 		Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
 				pictureService.getQueryWrapper(pictureQueryRequest));
@@ -273,6 +279,8 @@ public class PictureController {
 		if (!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
 			throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
 		}
+		// 补充审核参数
+		pictureService.fillReviewParams(picture, loginUser);
 		// 操作数据库
 		boolean result = pictureService.updateById(picture);
 		ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -289,4 +297,16 @@ public class PictureController {
 		return ResultUtils.success(pictureTagCategory);
 	}
 
+	/**
+	 * 图片审核
+	 */
+	@PostMapping("/review")
+	@AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+	public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureReviewRequest,
+												 HttpServletRequest request) {
+		ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
+		User loginUser = userService.getLoginUser(request);
+		pictureService.doPictureReview(pictureReviewRequest, loginUser);
+		return ResultUtils.success(true);
+	}
 }

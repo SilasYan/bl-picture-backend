@@ -1,6 +1,7 @@
 package com.baolong.blpicturebackend.service;
 
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
+import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.baolong.blpicturebackend.model.entity.Picture;
 import com.baolong.blpicturebackend.model.entity.User;
@@ -30,6 +31,14 @@ public interface PictureService extends IService<Picture> {
 	PictureVO uploadPicture(MultipartFile multipartFile,
 							PictureUploadRequest pictureUploadRequest,
 							User loginUser);
+
+	/**
+	 * 填充审核参数
+	 *
+	 * @param picture   图片对象
+	 * @param loginUser 登录用户
+	 */
+	void fillReviewParams(Picture picture, User loginUser);
 
 	/**
 	 * 校验图片对象
@@ -63,4 +72,13 @@ public interface PictureService extends IService<Picture> {
 	 * @return 查询条件对象
 	 */
 	QueryWrapper<Picture> getQueryWrapper(PictureQueryRequest pictureQueryRequest);
+
+	/**
+	 * 图片审核
+	 *
+	 * @param pictureReviewRequest 图片审核请求对象
+	 * @param loginUser            登录用户
+	 */
+	void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
+
 }
