@@ -31,6 +31,11 @@ public class CategoryTagVO implements Serializable {
 	 */
 	private Integer useNum;
 
+	/**
+	 * 用户 id
+	 */
+	private Long userId;
+
 	private static final long serialVersionUID = 1L;
 
 	/**
