@@ -9,7 +9,6 @@ import com.baolong.blpicturebackend.model.vo.PictureVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -23,12 +22,12 @@ public interface PictureService extends IService<Picture> {
 	/**
 	 * 上传图片
 	 *
-	 * @param multipartFile        上传的图片文件
+	 * @param inputSource          文件输入源
 	 * @param pictureUploadRequest 上传图片的请求对象
 	 * @param loginUser            登录的用户
 	 * @return PictureVO
 	 */
-	PictureVO uploadPicture(MultipartFile multipartFile,
+	PictureVO uploadPicture(Object inputSource,
 							PictureUploadRequest pictureUploadRequest,
 							User loginUser);
 

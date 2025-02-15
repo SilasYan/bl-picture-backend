@@ -7,6 +7,9 @@ import com.baolong.blpicturebackend.exception.BusinessException;
 import com.baolong.blpicturebackend.exception.ErrorCode;
 import com.baolong.blpicturebackend.exception.ThrowUtils;
 import com.baolong.blpicturebackend.manager.FileManager;
+import com.baolong.blpicturebackend.manager.upload.FilePictureUpload;
+import com.baolong.blpicturebackend.manager.upload.PictureUploadTemplate;
+import com.baolong.blpicturebackend.manager.upload.UrlPictureUpload;
 import com.baolong.blpicturebackend.mapper.PictureMapper;
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
@@ -28,7 +31,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -55,17 +57,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 	private UserService userService;
 	@Resource
 	private CategoryTagService categoryTagService;
+	@Resource
+	private FilePictureUpload filePictureUpload;
+	@Resource
+	private UrlPictureUpload urlPictureUpload;
 
 	/**
 	 * 上传图片
 	 *
-	 * @param multipartFile        上传的图片文件
+	 * @param inputSource          文件输入源
 	 * @param pictureUploadRequest 上传图片的请求对象
 	 * @param loginUser            登录的用户
 	 * @return PictureVO
 	 */
 	@Override
-	public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
+	public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
 		ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
 		// 用于判断是新增还是更新图片
 		Long pictureId = null;
@@ -85,7 +91,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 		// 上传图片，得到信息
 		// 按照用户 id 划分目录
 		String uploadPathPrefix = String.format("public/%s", loginUser.getId());
-		UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+		// UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+		// 根据 inputSource 类型区分上传方式
+		PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
+		if (inputSource instanceof String) {
+			pictureUploadTemplate = urlPictureUpload;
+		}
+		UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
 		// 构造要入库的图片信息
 		Picture picture = new Picture();
 		picture.setUrl(uploadPictureResult.getUrl());
@@ -184,11 +196,16 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 			Map<Integer, List<CategoryTag>> typeMap = categoryTagList.stream().collect(Collectors.groupingBy(CategoryTag::getType));
 			if (typeMap.get(CategoryTagEnum.CATEGORY.getValue()) != null) {
 				pictureVO.setCategory(typeMap.get(CategoryTagEnum.CATEGORY.getValue()).get(0).getName());
+				pictureVO.setCategoryId(typeMap.get(CategoryTagEnum.CATEGORY.getValue()).get(0).getId());
 			}
 			if (typeMap.get(CategoryTagEnum.TAG.getValue()) != null) {
 				pictureVO.setTags(typeMap.get(CategoryTagEnum.TAG.getValue())
 						.stream()
 						.map(CategoryTag::getName)
+						.collect(Collectors.toList()));
+				pictureVO.setTagIds(typeMap.get(CategoryTagEnum.TAG.getValue())
+						.stream()
+						.map(CategoryTag::getId)
 						.collect(Collectors.toList()));
 			}
 		}
@@ -309,7 +326,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 		queryWrapper.eq(ObjUtil.isNotEmpty(reviewStatus), "reviewStatus", reviewStatus);
 		queryWrapper.like(StrUtil.isNotBlank(reviewMessage), "reviewMessage", reviewMessage);
 		queryWrapper.eq(ObjUtil.isNotEmpty(reviewerId), "reviewerId", reviewerId);
-
 
 		// 拼接 分类标签列表的SQL
 		if (CollUtil.isNotEmpty(tags)) {
