@@ -110,6 +110,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 		// 构造要入库的图片信息
 		Picture picture = new Picture();
 		picture.setUrl(uploadPictureResult.getUrl());
+
+		// 设置缩略图
+		picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
+		// 原图大小/原图 url/缩略图 url
+		picture.setOriginSize(uploadPictureResult.getOriginSize());
+		picture.setOriginUrl(uploadPictureResult.getOriginUrl());
+
 		// 要入库的图片名称
 		String picName = uploadPictureResult.getPicName();
 		if (pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {

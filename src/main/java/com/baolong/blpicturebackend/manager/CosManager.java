@@ -1,5 +1,6 @@
 package com.baolong.blpicturebackend.manager;
 
+import cn.hutool.core.io.FileUtil;
 import com.baolong.blpicturebackend.config.CosClientConfig;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.COSObject;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 腾讯云对象存储服务
@@ -61,6 +64,30 @@ public class CosManager {
 		PicOperations picOperations = new PicOperations();
 		// 1 表示返回原图信息
 		picOperations.setIsPicInfo(1);
+
+		// 规则处理: 处理图片压缩转成 webp 格式
+		List<PicOperations.Rule> rules = new ArrayList<>();
+		String webpKey = FileUtil.mainName(key) + ".webp";
+		PicOperations.Rule compressRule = new PicOperations.Rule();
+		compressRule.setFileId(webpKey);
+		compressRule.setBucket(cosClientConfig.getBucket());
+		compressRule.setRule("imageMogr2/format/webp");
+		rules.add(compressRule);
+
+		// 针对大于 20KB 的图片处理
+		if (file.length() > 2 * 1024) {
+			// 规则处理: 处理缩略图
+			PicOperations.Rule thumbnailRule = new PicOperations.Rule();
+			// 这里用的是原图的后缀, 不是 图片压缩转换格式的 webp 后缀, 因为这里是针对原图处理的
+			thumbnailRule.setFileId(FileUtil.mainName(key) + "_thumbnail." + FileUtil.getSuffix(key));
+			thumbnailRule.setBucket(cosClientConfig.getBucket());
+			thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 128, 128));
+			rules.add(thumbnailRule);
+		}
+
+		// 把规则参数传入构造
+		picOperations.setRules(rules);
+
 		// 构造处理参数
 		putObjectRequest.setPicOperations(picOperations);
 		return cosClient.putObject(putObjectRequest);
