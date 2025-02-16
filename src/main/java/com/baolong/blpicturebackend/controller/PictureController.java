@@ -14,6 +14,7 @@ import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUpdateRequest;
+import com.baolong.blpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.model.entity.Picture;
@@ -321,5 +322,36 @@ public class PictureController {
 		User loginUser = userService.getLoginUser(request);
 		pictureService.doPictureReview(pictureReviewRequest, loginUser);
 		return ResultUtils.success(true);
+	}
+
+	/**
+	 * 上传图片（根据条件批量爬取上传）
+	 */
+	@PostMapping("/upload/batch")
+	@AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+	public BaseResponse<Integer> uploadPictureByBatch(
+			@RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
+			HttpServletRequest request) {
+		ThrowUtils.throwIf(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+		User loginUser = userService.getLoginUser(request);
+
+		List<String> tagList = pictureUploadByBatchRequest.getTags();
+		// 使用分类标签表的方式
+		if (pictureUploadByBatchRequest.getInputTagList() != null && !pictureUploadByBatchRequest.getInputTagList().isEmpty()) {
+			// 需要把这个里面的标签新增到数据库中
+			for (String tag : pictureUploadByBatchRequest.getInputTagList()) {
+				CategoryTag categoryTag = new CategoryTag();
+				categoryTag.setName(tag);
+				categoryTag.setType(CategoryTagEnum.TAG.getValue());
+				categoryTag.setUserId(loginUser.getId());
+				categoryTagService.save(categoryTag);
+				// 把新增的id放到 inputTagList 中
+				tagList.add(String.valueOf(categoryTag.getId()));
+			}
+		}
+		pictureUploadByBatchRequest.setTags(tagList);
+
+		int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
+		return ResultUtils.success(uploadCount);
 	}
 }
