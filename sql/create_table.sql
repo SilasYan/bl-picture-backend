@@ -70,6 +70,8 @@ ALTER TABLE picture
 ALTER TABLE picture
     ADD COLUMN originSize bigint NULL COMMENT '原图大小',
     ADD COLUMN originUrl varchar(512) NULL COMMENT '原图 url';
+ALTER TABLE `bl_picture`.`picture`
+    ADD COLUMN `resourceStatus` tinyint DEFAULT 0 NOT NULL COMMENT '资源状态：0-存在存储服务器中、1-从存储服务器中删除';
 
 
 -- 分类标签表

@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.baolong.blpicturebackend.exception.BusinessException;
 import com.baolong.blpicturebackend.exception.ErrorCode;
 import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.blpicturebackend.manager.CosManager;
 import com.baolong.blpicturebackend.manager.FileManager;
 import com.baolong.blpicturebackend.manager.upload.FilePictureUpload;
 import com.baolong.blpicturebackend.manager.upload.PictureUploadTemplate;
@@ -37,6 +38,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -48,6 +50,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -70,6 +74,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 	private FilePictureUpload filePictureUpload;
 	@Resource
 	private UrlPictureUpload urlPictureUpload;
+	@Resource
+	private CosManager cosManager;
 
 	/**
 	 * 上传图片
@@ -95,6 +101,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 			if (!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
 				throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
 			}
+			// 删除 COS 的文件
+			this.clearPictureFile(oldPicture);
 		}
 
 		// 上传图片，得到信息
@@ -487,6 +495,56 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 			}
 		}
 		return uploadCount;
+	}
+
+	/**
+	 * 清理图片文件
+	 *
+	 * @param oldPicture 图片对象
+	 */
+	@Async
+	@Override
+	public void clearPictureFile(Picture oldPicture) {
+		// TODO 判断该图片是否被多条记录使用, 我觉得不会出现这种情况
+		if (oldPicture == null) {
+			return;
+		}
+		// FIXME 注意，这里的 url 包含了域名，实际上只要传 key 值（存储路径）就够了
+		String url = oldPicture.getUrl();
+		if (StrUtil.isNotBlank(url)) {
+			cosManager.deleteObject(urlPath(url));
+		}
+		// 清理缩略图
+		String thumbnailUrl = oldPicture.getThumbnailUrl();
+		if (StrUtil.isNotBlank(thumbnailUrl)) {
+			cosManager.deleteObject(urlPath(thumbnailUrl));
+		}
+		// 清理原图
+		String originUrl = oldPicture.getOriginUrl();
+		if (StrUtil.isNotBlank(originUrl)) {
+			cosManager.deleteObject(urlPath(originUrl));
+		}
+		// TODO 这里有问题, MyBatisPlus 默认会拼接 idDelete=0 的条件; 更新当前图片在数据库中 resourceStatus
+		// boolean result = this.update(null, new LambdaUpdateWrapper<Picture>()
+		// 		.set(Picture::getResourceStatus, 1)
+		// 		.eq(Picture::getId, oldPicture.getId())
+		// 		.eq(Picture::getIsDelete,0)
+		// );
+		// if (!result) {
+		// 	log.error("更新资源状态失败, id = {}", oldPicture.getId());
+		// }
+	}
+
+	private String urlPath(String url) {
+		// 定义正则表达式，匹配协议和域名后面的路径部分
+		String regex = "https?://[^/]+(/.*)";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(url);
+		if (matcher.find()) {
+			// 获取匹配的路径部分
+			return matcher.group(1);
+		}
+		return "";
 	}
 
 }

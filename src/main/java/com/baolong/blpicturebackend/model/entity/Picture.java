@@ -133,6 +133,13 @@ public class Picture implements Serializable {
 	 */
 	private Integer isDelete;
 
+
+	/**
+	 * 资源状态：0-存在存储服务器中、1-从存储服务器中删除
+	 */
+	private Integer resourceStatus;
+
+
 	@TableField(exist = false)
 	private static final long serialVersionUID = 1L;
 }
