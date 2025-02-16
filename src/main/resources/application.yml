@@ -2,9 +2,17 @@ server:
   port: 8123
   servlet:
     context-path: /api
+  # cookie 30天过期
+  reactive:
+    session:
+      timeout: 2592000
 spring:
   application:
     name: bl-picture-backend
+  session:
+    store-type: redis
+    # session 30 天过期
+    timeout: 2592000
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/bl_picture
