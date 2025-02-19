@@ -1,5 +1,6 @@
 package com.baolong.blpicturebackend.service;
 
+import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
@@ -96,4 +97,28 @@ public interface PictureService extends IService<Picture> {
 	 * @param oldPicture 图片对象
 	 */
 	void clearPictureFile(Picture oldPicture);
+
+	/**
+	 * 编辑图片
+	 *
+	 * @param pictureEditRequest 图片编辑请求
+	 * @param loginUser          当前登录用户
+	 */
+	void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+	/**
+	 * 删除图片
+	 *
+	 * @param pictureId 图片ID
+	 * @param loginUser 当前登录用户
+	 */
+	void deletePicture(long pictureId, User loginUser);
+
+	/**
+	 * 检查图片权限
+	 *
+	 * @param loginUser 当前登录用户
+	 * @param picture   当前图片对象
+	 */
+	void checkPictureAuth(User loginUser, Picture picture);
 }

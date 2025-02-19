@@ -94,6 +94,11 @@ public class Picture implements Serializable {
 	private Long userId;
 
 	/**
+	 * 空间 id
+	 */
+	private Long spaceId;
+
+	/**
 	 * 状态：0-待审核; 1-通过; 2-拒绝
 	 */
 	private Integer reviewStatus;
@@ -133,12 +138,10 @@ public class Picture implements Serializable {
 	 */
 	private Integer isDelete;
 
-
 	/**
 	 * 资源状态：0-存在存储服务器中、1-从存储服务器中删除
 	 */
 	private Integer resourceStatus;
-
 
 	@TableField(exist = false)
 	private static final long serialVersionUID = 1L;
