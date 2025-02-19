@@ -432,6 +432,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 		queryWrapper.eq(ObjUtil.isNotEmpty(spaceId), "spaceId", spaceId);
 		queryWrapper.isNull(nullSpaceId, "spaceId");
 
+		Date startEditTime = pictureQueryRequest.getStartEditTime();
+		Date endEditTime = pictureQueryRequest.getEndEditTime();
+		queryWrapper.ge(ObjUtil.isNotEmpty(startEditTime), "editTime", startEditTime);
+		queryWrapper.lt(ObjUtil.isNotEmpty(endEditTime), "editTime", endEditTime);
+
 		// 拼接 分类标签列表的SQL
 		if (CollUtil.isNotEmpty(tags)) {
 			StringBuilder FIND_IN_SET_SQL = new StringBuilder(" (");
