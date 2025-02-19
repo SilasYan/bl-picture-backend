@@ -4,6 +4,10 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baolong.blpicturebackend.annotation.AuthCheck;
+import com.baolong.blpicturebackend.api.imageSearch.baidu.ImageSearchApiFacade;
+import com.baolong.blpicturebackend.api.imageSearch.baidu.model.ImageSearchResult;
+import com.baolong.blpicturebackend.api.imageSearch.so.SoImageSearchApiFacade;
+import com.baolong.blpicturebackend.api.imageSearch.so.model.SoImageSearchResult;
 import com.baolong.blpicturebackend.comment.BaseResponse;
 import com.baolong.blpicturebackend.comment.DeleteRequest;
 import com.baolong.blpicturebackend.comment.ResultUtils;
@@ -17,6 +21,7 @@ import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUpdateRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadRequest;
+import com.baolong.blpicturebackend.model.dto.picture.SearchPictureByPictureRequest;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.model.entity.Picture;
 import com.baolong.blpicturebackend.model.entity.Space;
@@ -485,4 +490,45 @@ public class PictureController {
 		int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
 		return ResultUtils.success(uploadCount);
 	}
+
+	/**
+	 * 以图搜图
+	 */
+	@PostMapping("/search/picture")
+	public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+		ThrowUtils.throwIf(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
+		Long pictureId = searchPictureByPictureRequest.getPictureId();
+		ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+		Picture oldPicture = pictureService.getById(pictureId);
+		ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+		List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(oldPicture.getOriginUrl());
+		return ResultUtils.success(resultList);
+	}
+
+	/**
+	 * 以图搜图
+	 */
+	@PostMapping("/search/picture/so")
+	public BaseResponse<List<SoImageSearchResult>> searchPictureByPictureIsSo(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+		ThrowUtils.throwIf(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
+		Long pictureId = searchPictureByPictureRequest.getPictureId();
+		ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+		Picture oldPicture = pictureService.getById(pictureId);
+		ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+		List<SoImageSearchResult> resultList = new ArrayList<>();
+		// 这个 start 是控制查询多少页, 每页是 20 条
+		int start = 0;
+		while (resultList.size() <= 50) {
+			List<SoImageSearchResult> tempList = SoImageSearchApiFacade.searchImage(
+					StrUtil.isNotBlank(oldPicture.getOriginUrl()) ? oldPicture.getOriginUrl() : oldPicture.getUrl(), start
+			);
+			if (tempList.isEmpty()) {
+				break;
+			}
+			resultList.addAll(tempList);
+			start += tempList.size();
+		}
+		return ResultUtils.success(resultList);
+	}
+
 }
