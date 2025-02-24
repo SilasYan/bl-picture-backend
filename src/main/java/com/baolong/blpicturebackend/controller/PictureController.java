@@ -21,6 +21,7 @@ import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUpdateRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadRequest;
+import com.baolong.blpicturebackend.model.dto.picture.SearchPictureByColorRequest;
 import com.baolong.blpicturebackend.model.dto.picture.SearchPictureByPictureRequest;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.model.entity.Picture;
@@ -531,4 +532,16 @@ public class PictureController {
 		return ResultUtils.success(resultList);
 	}
 
+	/**
+	 * 根据颜色搜索图片
+	 */
+	@PostMapping("/search/color")
+	public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPictureByColorRequest searchPictureByColorRequest, HttpServletRequest request) {
+		ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR);
+		String picColor = searchPictureByColorRequest.getPicColor();
+		Long spaceId = searchPictureByColorRequest.getSpaceId();
+		User loginUser = userService.getLoginUser(request);
+		List<PictureVO> result = pictureService.searchPictureByColor(spaceId, picColor, loginUser);
+		return ResultUtils.success(result);
+	}
 }

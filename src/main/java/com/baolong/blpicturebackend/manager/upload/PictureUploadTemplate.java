@@ -76,9 +76,8 @@ public abstract class PictureUploadTemplate {
 					thumbnailCiObject = objectList.get(1);
 				}
 				// 封装压缩图返回结果
-				return buildResult(originFilename, file, uploadPath, compressedCiObject, thumbnailCiObject);
+				return buildResult(originFilename, file, uploadPath, compressedCiObject, thumbnailCiObject, imageInfo);
 			}
-
 
 			// 5. 封装返回结果
 			return buildResult(originFilename, file, uploadPath, imageInfo);
@@ -118,7 +117,7 @@ public abstract class PictureUploadTemplate {
 	/**
 	 * 封装返回结果
 	 */
-	private UploadPictureResult buildResult(String originFilename, File file, String uploadPath, CIObject compressedCiObject, CIObject thumbnailCiObject) {
+	private UploadPictureResult buildResult(String originFilename, File file, String uploadPath, CIObject compressedCiObject, CIObject thumbnailCiObject, ImageInfo imageInfo) {
 		UploadPictureResult uploadPictureResult = new UploadPictureResult();
 		int picWidth = compressedCiObject.getWidth();
 		int picHeight = compressedCiObject.getHeight();
@@ -135,6 +134,9 @@ public abstract class PictureUploadTemplate {
 		// 原图大小/原图 url/缩略图 url
 		uploadPictureResult.setOriginSize(FileUtil.size(file));
 		uploadPictureResult.setOriginUrl(cosClientConfig.getHost() + "/" + uploadPath);
+		// 存储图片主色调
+		// uploadPictureResult.setPicColor(imageInfo.getAve());
+		uploadPictureResult.setPicColor(cosManager.getImageAve(uploadPath));
 		return uploadPictureResult;
 	}
 
@@ -157,6 +159,9 @@ public abstract class PictureUploadTemplate {
 		uploadPictureResult.setOriginSize(FileUtil.size(file));
 		uploadPictureResult.setOriginUrl(cosClientConfig.getHost() + "/" + uploadPath);
 		uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + uploadPath);
+		// 存储图片主色调
+		// uploadPictureResult.setPicColor(imageInfo.getAve());
+		uploadPictureResult.setPicColor(cosManager.getImageAve(uploadPath));
 		return uploadPictureResult;
 	}
 

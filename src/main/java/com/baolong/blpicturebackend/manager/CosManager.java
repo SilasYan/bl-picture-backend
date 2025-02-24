@@ -1,17 +1,24 @@
 package com.baolong.blpicturebackend.manager;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.json.JSONUtil;
 import com.baolong.blpicturebackend.config.CosClientConfig;
+import com.baolong.blpicturebackend.exception.BusinessException;
+import com.baolong.blpicturebackend.exception.ErrorCode;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.COSObject;
+import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.model.GetObjectRequest;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.ciModel.persistence.PicOperations;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +27,7 @@ import java.util.List;
  * <p>
  * 叫做 XXXManager 主要是做区分, 表示这个类是可以单独抽取出去的
  */
+@Slf4j
 @Component
 public class CosManager {
 
@@ -102,4 +110,37 @@ public class CosManager {
 		cosClient.deleteObject(cosClientConfig.getBucket(), key);
 	}
 
+
+	/**
+	 * 获取图片主色调
+	 *
+	 * @param imageKey 图片 key
+	 * @return 图片主色调
+	 */
+	public String getImageAve(String imageKey) {
+		GetObjectRequest objectRequest = new GetObjectRequest(cosClientConfig.getBucket(), imageKey);
+		// 设置图片处理规则为获取主色调
+		String rule = "imageAve";
+		objectRequest.putCustomQueryParameter(rule, null);
+		// 获取对象
+		COSObject cosObject = cosClient.getObject(objectRequest);
+		try (
+				COSObjectInputStream cosIp = cosObject.getObjectContent();
+				ByteArrayOutputStream op = new ByteArrayOutputStream()
+		) {
+			// 读取流的内容
+			byte[] bytes = new byte[1024];
+			int len;
+			while ((len = cosIp.read(bytes)) != -1) {
+				op.write(bytes, 0, len);
+			}
+			// 将字节数组转换为字符串
+			String aveColor = op.toString(StandardCharsets.UTF_8);
+			System.out.println("数据: "+ JSONUtil.parse(aveColor));
+			return JSONUtil.parseObj(aveColor).getStr("RGB");
+		} catch (Exception e) {
+			log.error("获取图片主色调失败", e);
+			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "获取图片主色调失败");
+		}
+	}
 }
