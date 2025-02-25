@@ -1,5 +1,6 @@
 package com.baolong.blpicturebackend.service;
 
+import com.baolong.blpicturebackend.model.dto.picture.PictureEditByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
@@ -132,4 +133,12 @@ public interface PictureService extends IService<Picture> {
 	 * @return 图片列表
 	 */
 	List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
+
+	/**
+	 * 批量编辑图片
+	 *
+	 * @param pictureEditByBatchRequest 图片批量编辑请求
+	 * @param loginUser                 当前图片对象
+	 */
+	void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
 }

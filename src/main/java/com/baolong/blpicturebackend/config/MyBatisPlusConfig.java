@@ -11,19 +11,19 @@ import org.springframework.context.annotation.Configuration;
  * MyBatisPlus 分页插件配置
  */
 @Configuration
-@MapperScan("com.yupi.yupicturebackend.mapper")
+@MapperScan("com.baolong.blpicturebackend.mapper")
 public class MyBatisPlusConfig {
 
-    /**
-     * 拦截器配置
-     *
-     * @return {@link MybatisPlusInterceptor}
-     */
-    @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor() {
-        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        // 分页插件
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-        return interceptor;
-    }
+	/**
+	 * 拦截器配置
+	 *
+	 * @return {@link MybatisPlusInterceptor}
+	 */
+	@Bean
+	public MybatisPlusInterceptor mybatisPlusInterceptor() {
+		MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+		// 分页插件
+		interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+		return interceptor;
+	}
 }

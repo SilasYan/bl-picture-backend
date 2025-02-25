@@ -15,6 +15,7 @@ import com.baolong.blpicturebackend.constant.UserConstant;
 import com.baolong.blpicturebackend.exception.BusinessException;
 import com.baolong.blpicturebackend.exception.ErrorCode;
 import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.blpicturebackend.model.dto.picture.PictureEditByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
@@ -544,4 +545,16 @@ public class PictureController {
 		List<PictureVO> result = pictureService.searchPictureByColor(spaceId, picColor, loginUser);
 		return ResultUtils.success(result);
 	}
+
+	/**
+	 * 批量修改图片
+	 */
+	@PostMapping("/edit/batch")
+	public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
+		ThrowUtils.throwIf(pictureEditByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+		User loginUser = userService.getLoginUser(request);
+		pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
+		return ResultUtils.success(true);
+	}
+
 }
