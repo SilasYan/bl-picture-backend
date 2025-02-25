@@ -58,7 +58,7 @@ public class UrlPictureUpload extends PictureUploadTemplate {
 			String contentType = response.header("Content-Type");
 			if (StrUtil.isNotBlank(contentType)) {
 				// 允许的图片类型
-				final List<String> ALLOW_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp");
+				final List<String> ALLOW_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif");
 				ThrowUtils.throwIf(!ALLOW_CONTENT_TYPES.contains(contentType.toLowerCase()),
 						ErrorCode.PARAMS_ERROR, "文件类型错误");
 			}
@@ -89,8 +89,8 @@ public class UrlPictureUpload extends PictureUploadTemplate {
 	@Override
 	protected String getOriginFilename(Object inputSource) {
 		String fileUrl = (String) inputSource;
-		// 从 URL 中提取文件名
-		return FileUtil.mainName(fileUrl);
+		// 从 URL 中提取文件名 以及需要拼上 文件后缀
+		return FileUtil.mainName(fileUrl) + "." + FileUtil.extName(fileUrl);
 	}
 
 	/**
