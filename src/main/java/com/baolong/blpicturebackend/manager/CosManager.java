@@ -59,9 +59,18 @@ public class CosManager {
 	}
 
 	/**
+	 * 删除对象
+	 *
+	 * @param key 文件 key
+	 */
+	public void deleteObject(String key) {
+		cosClient.deleteObject(cosClientConfig.getBucket(), key);
+	}
+
+	/**
 	 * 上传对象（附带图片信息）
 	 * <p>
-	 * <a href="https://cloud.tencent.com/document/product/436/55377">这里用到了 腾讯 COS 的数据万象</a>
+	 * <a href="https://cloud.tencent.com/document/product/436/115609">腾讯 COS 数据万象</a>
 	 *
 	 * @param key  唯一键
 	 * @param file 文件
@@ -73,43 +82,53 @@ public class CosManager {
 		// 1 表示返回原图信息
 		picOperations.setIsPicInfo(1);
 
-		// 规则处理: 处理图片压缩转成 webp 格式
+		// 规则处理
 		List<PicOperations.Rule> rules = new ArrayList<>();
-		String webpKey = FileUtil.mainName(key) + ".webp";
-		PicOperations.Rule compressRule = new PicOperations.Rule();
-		compressRule.setFileId(webpKey);
-		compressRule.setBucket(cosClientConfig.getBucket());
-		compressRule.setRule("imageMogr2/format/webp");
-		rules.add(compressRule);
-
-		// 针对大于 20KB 的图片处理
+		// 处理图片格式为 webp 格式
+		rules.add(ciFormatConversion(key, "webp"));
+		// 针对大于 20KB 的图片, 需要生成缩略图
 		if (file.length() > 2 * 1024) {
-			// 规则处理: 处理缩略图
-			PicOperations.Rule thumbnailRule = new PicOperations.Rule();
-			// 这里用的是原图的后缀, 不是 图片压缩转换格式的 webp 后缀, 因为这里是针对原图处理的
-			thumbnailRule.setFileId(FileUtil.mainName(key) + "_thumbnail." + FileUtil.getSuffix(key));
-			thumbnailRule.setBucket(cosClientConfig.getBucket());
-			thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 128, 128));
-			rules.add(thumbnailRule);
+			rules.add(ciThumbnailConversion(key));
 		}
-
-		// 把规则参数传入构造
-		picOperations.setRules(rules);
 
 		// 构造处理参数
 		putObjectRequest.setPicOperations(picOperations);
+		picOperations.setRules(rules);
 		return cosClient.putObject(putObjectRequest);
 	}
 
 	/**
-	 * 删除对象
+	 * 数据万象: 转换图片格式
 	 *
-	 * @param key 文件 key
+	 * @param imageKey        原图 key, 即图片的路径包含后缀
+	 * @param targetImageType 目标图片类型; jpg、jpeg、png、webp、heif 更多参考文档
+	 *                        <p>
+	 *                        <a href="https://cloud.tencent.com/document/product/436/113299">转换图片格式文档</a>
 	 */
-	public void deleteObject(String key) {
-		cosClient.deleteObject(cosClientConfig.getBucket(), key);
+	public PicOperations.Rule ciFormatConversion(String imageKey, String targetImageType) {
+		PicOperations.Rule compressRule = new PicOperations.Rule();
+		compressRule.setFileId(FileUtil.mainName(imageKey) + "." + targetImageType);
+		compressRule.setBucket(cosClientConfig.getBucket());
+		compressRule.setRule("imageMogr2/format/" + targetImageType);
+		return compressRule;
 	}
 
+	/**
+	 * 数据万象: 转换图片为缩略图（其实就是缩放）
+	 *
+	 * @param imageKey 原图 key, 即图片的路径包含后缀
+	 *                 <p>
+	 *                 <a href="https://cloud.tencent.com/document/product/436/113295">转换图片为缩略图文档</a>
+	 */
+	public PicOperations.Rule ciThumbnailConversion(String imageKey) {
+		// 规则处理: 处理缩略图
+		PicOperations.Rule thumbnailRule = new PicOperations.Rule();
+		// 这里用的是原图的后缀, 不是 图片压缩转换格式的 webp 后缀, 因为这里是针对原图处理的
+		thumbnailRule.setFileId(FileUtil.mainName(imageKey) + "_thumbnail." + FileUtil.getSuffix(imageKey));
+		thumbnailRule.setBucket(cosClientConfig.getBucket());
+		thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 256, 256));
+		return thumbnailRule;
+	}
 
 	/**
 	 * 获取图片主色调
@@ -120,8 +139,7 @@ public class CosManager {
 	public String getImageAve(String imageKey) {
 		GetObjectRequest objectRequest = new GetObjectRequest(cosClientConfig.getBucket(), imageKey);
 		// 设置图片处理规则为获取主色调
-		String rule = "imageAve";
-		objectRequest.putCustomQueryParameter(rule, null);
+		objectRequest.putCustomQueryParameter("imageAve", null);
 		// 获取对象
 		COSObject cosObject = cosClient.getObject(objectRequest);
 		try (
@@ -136,7 +154,6 @@ public class CosManager {
 			}
 			// 将字节数组转换为字符串
 			String aveColor = op.toString(StandardCharsets.UTF_8);
-			System.out.println("数据: "+ JSONUtil.parse(aveColor));
 			return JSONUtil.parseObj(aveColor).getStr("RGB");
 		} catch (Exception e) {
 			log.error("获取图片主色调失败", e);
