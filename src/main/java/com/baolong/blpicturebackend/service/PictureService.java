@@ -1,5 +1,7 @@
 package com.baolong.blpicturebackend.service;
 
+import com.baolong.blpicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.baolong.blpicturebackend.model.dto.picture.CreatePictureOutPaintingTaskRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureQueryRequest;
@@ -141,4 +143,13 @@ public interface PictureService extends IService<Picture> {
 	 * @param loginUser                 当前图片对象
 	 */
 	void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
+
+	/**
+	 * 创建图片扩图任务
+	 *
+	 * @param createPictureOutPaintingTaskRequest 图片扩图任务请求
+	 * @param loginUser                           当前登录用户
+	 * @return 扩图任务响应
+	 */
+	CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 }
