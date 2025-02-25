@@ -9,22 +9,23 @@ server:
 spring:
   application:
     name: bl-picture-backend
+  profiles:
+    # 开发环境文件后缀 local/prod
+    active: local
   session:
     store-type: redis
     # session 30 天过期
     timeout: 2592000
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/bl_picture
-    username: root
-    password: 123456
+    url: ${mysql.url}
+    username: ${mysql.username}
+    password: ${mysql.password}
   redis:
-    host: 60.204.141.27
-    port: 6379
-    database: 0
-    password: baolong@00
-  profiles:
-    active: local
+    host: ${redis.host}
+    port: ${redis.port}
+    database: ${redis.database}
+    password: ${redis.password}
   # 开放更大的上传大小
   servlet:
     multipart:
@@ -34,7 +35,7 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
     # 仅在开发环境开启日志
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: ${mybatis-plus.log-impl}
   global-config:
     db-config:
       logic-delete-field: isDelete # 全局逻辑删除的实体字段名
