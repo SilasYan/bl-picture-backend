@@ -1,6 +1,7 @@
 package com.baolong.blpicturebackend.controller;
 
 import com.baolong.blpicturebackend.annotation.AuthCheck;
+import com.baolong.blpicturebackend.auth.SpaceUserAuthManager;
 import com.baolong.blpicturebackend.comment.BaseResponse;
 import com.baolong.blpicturebackend.comment.DeleteRequest;
 import com.baolong.blpicturebackend.comment.ResultUtils;
@@ -44,6 +45,8 @@ public class SpaceController {
 	private UserService userService;
 	@Resource
 	private SpaceService spaceService;
+	@Resource
+	private SpaceUserAuthManager spaceUserAuthManager;
 
 	/**
 	 * 创建空间
@@ -125,8 +128,12 @@ public class SpaceController {
 		// 查询数据库
 		Space space = spaceService.getById(id);
 		ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
+		SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+		User loginUser = userService.getLoginUser(request);
+		List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+		spaceVO.setPermissionList(permissionList);
 		// 获取封装类
-		return ResultUtils.success(spaceService.getSpaceVO(space, request));
+		return ResultUtils.success(spaceVO);
 	}
 
 	/**

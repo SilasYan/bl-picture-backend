@@ -3,6 +3,7 @@ package com.baolong.blpicturebackend.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baolong.blpicturebackend.auth.StpKit;
 import com.baolong.blpicturebackend.constant.UserConstant;
 import com.baolong.blpicturebackend.exception.BusinessException;
 import com.baolong.blpicturebackend.exception.ErrorCode;
@@ -127,6 +128,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 		}
 		// 3. 记录用户的登录态
 		request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
+
+		// 4. 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
+		StpKit.SPACE.login(user.getId());
+		StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
+
 		return this.getLoginUserVO(user);
 	}
 
