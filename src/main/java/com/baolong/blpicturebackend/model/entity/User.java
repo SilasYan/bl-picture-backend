@@ -90,6 +90,11 @@ public class User implements Serializable {
     private Long vipNumber;
 
     /**
+     * 会员标识：VIP/SVIP
+     */
+    private String vipSign;
+
+    /**
      * 分享码
      */
     private String shareCode;
