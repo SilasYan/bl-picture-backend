@@ -146,3 +146,8 @@ create table if not exists space_user
 -- 会员标识
 ALTER TABLE user
     ADD COLUMN vipSign varchar(255) NULL COMMENT '会员标识：VIP/SVIP';
+ALTER TABLE user
+    ADD COLUMN userEmail varchar(255) NULL COMMENT '用户邮箱',
+    ADD COLUMN userPhone varchar(255) NULL COMMENT '用户手机号';
+ALTER TABLE `bl_picture`.`user`
+    ADD COLUMN `birthday` date NULL COMMENT '出生日期' AFTER `userRole`;

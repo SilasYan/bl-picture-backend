@@ -6,6 +6,7 @@ import com.baolong.blpicturebackend.model.vo.LoginUserVO;
 import com.baolong.blpicturebackend.model.vo.UserVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -108,4 +109,14 @@ public interface UserService extends IService<User> {
 	 * @return 是否兑换成功
 	 */
 	boolean exchangeVip(User user, String vipCode);
+
+	/**
+	 * 上传头像
+	 *
+	 * @param avatarFile 头像文件
+	 * @param request    HttpServletRequest
+	 * @param loginUser  登录的用户
+	 * @return 头像地址
+	 */
+	String uploadAvatar(MultipartFile avatarFile, HttpServletRequest request, User loginUser);
 }

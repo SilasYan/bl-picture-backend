@@ -24,7 +24,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -111,6 +113,17 @@ public class UserController {
 	}
 
 	/**
+	 * 根据 id 获取用户信息
+	 */
+	@GetMapping("/getInfo")
+	public BaseResponse<UserVO> getUserInfoById(HttpServletRequest httpServletRequest) {
+		User loginUser = userService.getLoginUser(httpServletRequest);
+		User user = userService.getById(loginUser.getId());
+		ThrowUtils.throwIf(user == null, ErrorCode.NOT_FOUND_ERROR);
+		return ResultUtils.success(userService.getUserVO(user));
+	}
+
+	/**
 	 * 根据 id 获取包装类
 	 */
 	@GetMapping("/get/vo")
@@ -150,6 +163,25 @@ public class UserController {
 	}
 
 	/**
+	 * 更新用户信息
+	 */
+	@PostMapping("/updateInfo")
+	public BaseResponse<Boolean> updateUserInfo(@RequestBody UserUpdateRequest userUpdateRequest, HttpServletRequest httpServletRequest) {
+		if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR);
+		}
+		User loginUser = userService.getLoginUser(httpServletRequest);
+		if (!loginUser.getId().equals(userUpdateRequest.getId()) || !userService.isAdmin(loginUser)) {
+			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "修改信息失败");
+		}
+		User user = new User();
+		BeanUtils.copyProperties(userUpdateRequest, user);
+		boolean result = userService.updateById(user);
+		ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+		return ResultUtils.success(true);
+	}
+
+	/**
 	 * 分页获取用户封装列表（仅管理员）
 	 *
 	 * @param userQueryRequest 查询请求参数
@@ -180,5 +212,14 @@ public class UserController {
 		// 调用 service 层的方法进行会员兑换
 		boolean result = userService.exchangeVip(loginUser, vipCode);
 		return ResultUtils.success(result);
+	}
+
+	/**
+	 * 上传头像
+	 */
+	@PostMapping("/uploadAvatar")
+	public BaseResponse<String> uploadAvatar(@RequestPart("file") MultipartFile avatarFile, HttpServletRequest request) {
+		User loginUser = userService.getLoginUser(request);
+		return ResultUtils.success(userService.uploadAvatar(avatarFile, request, loginUser));
 	}
 }

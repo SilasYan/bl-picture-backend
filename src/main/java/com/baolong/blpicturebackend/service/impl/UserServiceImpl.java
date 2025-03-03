@@ -11,7 +11,11 @@ import com.baolong.blpicturebackend.auth.StpKit;
 import com.baolong.blpicturebackend.constant.UserConstant;
 import com.baolong.blpicturebackend.exception.BusinessException;
 import com.baolong.blpicturebackend.exception.ErrorCode;
+import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.blpicturebackend.manager.upload.FilePictureUpload;
+import com.baolong.blpicturebackend.manager.upload.PictureUploadTemplate;
 import com.baolong.blpicturebackend.mapper.UserMapper;
+import com.baolong.blpicturebackend.model.dto.picture.UploadPictureResult;
 import com.baolong.blpicturebackend.model.dto.user.UserQueryRequest;
 import com.baolong.blpicturebackend.model.dto.user.UserVipCode;
 import com.baolong.blpicturebackend.model.entity.User;
@@ -29,6 +33,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -48,6 +53,9 @@ import java.util.stream.Collectors;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 		implements UserService {
+
+	@Autowired
+	private FilePictureUpload filePictureUpload;
 
 	/**
 	 * 用户注册
@@ -391,6 +399,36 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 	}
 
 	// endregion ------- 以下代码为用户兑换会员功能 --------
+
+	/**
+	 * 上传头像
+	 *
+	 * @param avatarFile 头像文件
+	 * @param request    HttpServletRequest
+	 * @param loginUser  登录的用户
+	 * @return 头像地址
+	 */
+	@Override
+	public String uploadAvatar(MultipartFile avatarFile, HttpServletRequest request, User loginUser) {
+		ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+		// 上传头像, 头像统一管理
+		String uploadPathPrefix = String.format("avatar/%s", loginUser.getId());
+		PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
+		UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(avatarFile, uploadPathPrefix);
+		String originUrl = uploadPictureResult.getOriginUrl();
+		if (StrUtil.isBlank(originUrl)) {
+			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "上传头像失败");
+		}
+		// 更新用户头像
+		User user = new User();
+		user.setId(loginUser.getId());
+		user.setUserAvatar(originUrl);
+		boolean updated = this.updateById(user);
+		if (!updated) {
+			throw new BusinessException(ErrorCode.OPERATION_ERROR, "更新用户头像失败");
+		}
+		return originUrl;
+	}
 }
 
 
