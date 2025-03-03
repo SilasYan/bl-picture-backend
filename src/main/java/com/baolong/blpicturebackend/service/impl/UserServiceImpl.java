@@ -360,16 +360,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 	 * 更新用户会员信息
 	 */
 	private void updateUserVipInfo(User user, String usedVipCode) {
-		// 计算过期时间（当前时间 + 1 年）
-		Date expireTime = DateUtil.offsetMonth(new Date(), 12); // 计算当前时间加 1 年后的时间
-
+		User currentUser = this.lambdaQuery().eq(User::getId, user.getId()).one();
+		// 如果当前用户已经有了会员, 并且会员未过期, 则在该日期基础上加上365天, 否则为当前时间加365天
+		Date expireTime;
+		if (currentUser.getVipExpireTime() != null && currentUser.getVipExpireTime().after(new Date())) {
+			expireTime = DateUtil.offsetDay(currentUser.getVipExpireTime(), 365); // 计算当前时间加 365 天后的时间
+		} else {
+			expireTime = DateUtil.offsetDay(new Date(), 365); // 计算当前时间加 365 天后的时间
+		}
 		// 构建更新对象
 		User updateUser = new User();
 		updateUser.setId(user.getId());
 		updateUser.setVipExpireTime(expireTime); // 设置过期时间
 		updateUser.setVipCode(usedVipCode);     // 记录使用的兑换码
-		updateUser.setVipSign(UserVipEnum.S_VIP.getValue());       // 修改用户会员角色
-
+		updateUser.setVipSign(UserVipEnum.VIP.getValue());       // 修改用户会员角色
+		if (currentUser.getVipNumber() == null) {
+			// 查询用户表中 vipNumber 最大的那一条数据
+			User maxVipNumberUser = this.lambdaQuery().select(User::getVipNumber).orderByDesc(User::getVipNumber).last("limit 1").one();
+			if (maxVipNumberUser == null) {
+				updateUser.setVipNumber(10000L); // 如果没有数据，则设置会员编号为 1
+			} else {
+				updateUser.setVipNumber(maxVipNumberUser.getVipNumber() + 1); // 修改用户会员编号
+			}
+		}
 		// 执行更新
 		boolean updated = this.updateById(updateUser);
 		if (!updated) {
