@@ -63,16 +63,16 @@ public class UrlPictureUpload extends PictureUploadTemplate {
 						ErrorCode.PARAMS_ERROR, "文件类型错误");
 			}
 			// 5. 校验文件大小
-			String contentLengthStr = response.header("Content-Length");
-			if (StrUtil.isNotBlank(contentLengthStr)) {
-				try {
-					long contentLength = Long.parseLong(contentLengthStr);
-					final long TWO_MB = 2 * 1024 * 1024L; // 限制文件大小为 2MB
-					ThrowUtils.throwIf(contentLength > TWO_MB, ErrorCode.PARAMS_ERROR, "文件大小不能超过 2M");
-				} catch (NumberFormatException e) {
-					throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件大小格式错误");
-				}
-			}
+			// String contentLengthStr = response.header("Content-Length");
+			// if (StrUtil.isNotBlank(contentLengthStr)) {
+			// 	try {
+			// 		long contentLength = Long.parseLong(contentLengthStr);
+			// 		final long TWO_MB = 2 * 1024 * 1024L; // 限制文件大小为 2MB
+			// 		ThrowUtils.throwIf(contentLength > TWO_MB, ErrorCode.PARAMS_ERROR, "文件大小不能超过 2M");
+			// 	} catch (NumberFormatException e) {
+			// 		throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件大小格式错误");
+			// 	}
+			// }
 		} finally {
 			if (response != null) {
 				response.close();
