@@ -223,10 +223,17 @@ public class PictureController {
 			ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
 		}
 		// 获取权限列表
-		User loginUser = userService.getLoginUser(request);
-		List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+		User loginUser = null;
+		try {
+			loginUser = userService.getLoginUser(request);
+		} catch (Exception e) {
+			log.info("未登录");
+		}
 		PictureVO pictureVO = pictureService.getPictureVO(picture, request);
-		pictureVO.setPermissionList(permissionList);
+		if (loginUser != null) {
+			List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+			pictureVO.setPermissionList(permissionList);
+		}
 		// 获取封装类
 		return ResultUtils.success(pictureVO);
 	}
