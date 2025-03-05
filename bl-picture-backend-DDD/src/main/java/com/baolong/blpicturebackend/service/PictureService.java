@@ -1,6 +1,6 @@
 package com.baolong.blpicturebackend.service;
 
-import com.baolong.blpicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.baolong.picture.infrastructure.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.baolong.blpicturebackend.model.dto.picture.CreatePictureOutPaintingTaskRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
@@ -9,7 +9,7 @@ import com.baolong.blpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.baolong.blpicturebackend.model.entity.Picture;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.vo.PictureVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

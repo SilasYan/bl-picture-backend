@@ -2,6 +2,7 @@ package com.baolong.blpicturebackend.model.vo;
 
 import cn.hutool.core.util.StrUtil;
 import com.baolong.blpicturebackend.model.entity.Picture;
+import com.baolong.picture.interfaces.vo.user.UserVO;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 

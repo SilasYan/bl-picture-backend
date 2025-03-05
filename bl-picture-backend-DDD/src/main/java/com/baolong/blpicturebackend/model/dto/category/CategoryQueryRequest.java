@@ -1,6 +1,6 @@
 package com.baolong.blpicturebackend.model.dto.category;
 
-import com.baolong.blpicturebackend.comment.PageRequest;
+import com.baolong.picture.infrastructure.comment.PageRequest;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

@@ -1,6 +1,6 @@
 package com.baolong.blpicturebackend.manager.websocket.model;
 
-import com.baolong.blpicturebackend.model.vo.UserVO;
+import com.baolong.picture.interfaces.vo.user.UserVO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

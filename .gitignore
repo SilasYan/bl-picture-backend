@@ -35,3 +35,5 @@ build/
 ### CUSTOMER ###
 application-local.yml
 application-prod.yml
+bl-picture-backend-DDD/.idea/
+bl-picture-backend-DDD/target/

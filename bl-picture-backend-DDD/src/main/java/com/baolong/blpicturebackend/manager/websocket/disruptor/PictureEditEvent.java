@@ -1,7 +1,7 @@
 package com.baolong.blpicturebackend.manager.websocket.disruptor;
 
 import com.baolong.blpicturebackend.manager.websocket.model.PictureEditRequestMessage;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import lombok.Data;
 import org.springframework.web.socket.WebSocketSession;
 

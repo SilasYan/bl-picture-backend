@@ -6,11 +6,11 @@ import com.baolong.blpicturebackend.auth.SpaceUserAuthManager;
 import com.baolong.blpicturebackend.auth.model.SpaceUserPermissionConstant;
 import com.baolong.blpicturebackend.model.entity.Picture;
 import com.baolong.blpicturebackend.model.entity.Space;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.enums.SpaceTypeEnum;
 import com.baolong.blpicturebackend.service.PictureService;
 import com.baolong.blpicturebackend.service.SpaceService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -32,7 +32,7 @@ import java.util.Map;
 public class WsHandshakeInterceptor implements HandshakeInterceptor {
 
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 
 	@Resource
 	private PictureService pictureService;
@@ -53,7 +53,7 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
 				log.error("缺少图片参数，拒绝握手");
 				return false;
 			}
-			User loginUser = userService.getLoginUser(servletRequest);
+			User loginUser = userApplicationService.getLoginUser(servletRequest);
 			if (ObjUtil.isEmpty(loginUser)) {
 				log.error("用户未登录，拒绝握手");
 				return false;

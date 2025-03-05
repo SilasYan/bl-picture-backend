@@ -3,20 +3,20 @@ package com.baolong.blpicturebackend.controller;
 import cn.hutool.core.util.ObjectUtil;
 import com.baolong.blpicturebackend.auth.annotation.SaSpaceCheckPermission;
 import com.baolong.blpicturebackend.auth.model.SpaceUserPermissionConstant;
-import com.baolong.blpicturebackend.comment.BaseResponse;
-import com.baolong.blpicturebackend.comment.DeleteRequest;
-import com.baolong.blpicturebackend.comment.ResultUtils;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.comment.BaseResponse;
+import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.blpicturebackend.model.dto.spaceUser.SpaceUserAddRequest;
 import com.baolong.blpicturebackend.model.dto.spaceUser.SpaceUserEditRequest;
 import com.baolong.blpicturebackend.model.dto.spaceUser.SpaceUserQueryRequest;
 import com.baolong.blpicturebackend.model.entity.SpaceUser;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.vo.SpaceUserVO;
 import com.baolong.blpicturebackend.service.SpaceUserService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,7 +37,7 @@ public class SpaceUserController {
 	private SpaceUserService spaceUserService;
 
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 
 	/**
 	 * 添加成员到空间
@@ -131,7 +131,7 @@ public class SpaceUserController {
 	 */
 	@PostMapping("/list/my")
 	public BaseResponse<List<SpaceUserVO>> listMyTeamSpace(HttpServletRequest request) {
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		SpaceUserQueryRequest spaceUserQueryRequest = new SpaceUserQueryRequest();
 		spaceUserQueryRequest.setUserId(loginUser.getId());
 		List<SpaceUser> spaceUserList = spaceUserService.list(

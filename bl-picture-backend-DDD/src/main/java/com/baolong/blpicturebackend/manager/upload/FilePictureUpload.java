@@ -1,8 +1,8 @@
 package com.baolong.blpicturebackend.manager.upload;
 
 import cn.hutool.core.io.FileUtil;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 

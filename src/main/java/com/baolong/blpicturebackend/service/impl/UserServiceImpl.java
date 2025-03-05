@@ -342,7 +342,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 	 */
 	private JSONArray readVipCodeFile() {
 		try {
-			Resource resource = resourceLoader.getResource("classpath:biz/userVipCode.json");
+			// Resource resource = resourceLoader.getResource("classpath:biz/userVipCode.json");
+			Resource resource = resourceLoader.getResource("/userVipCode.json");
 			String content = FileUtil.readString(resource.getFile(), StandardCharsets.UTF_8);
 			return JSONUtil.parseArray(content);
 		} catch (IOException e) {
@@ -356,7 +357,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 	 */
 	private void writeVipCodeFile(JSONArray jsonArray) {
 		try {
-			Resource resource = resourceLoader.getResource("classpath:biz/userVipCode.json");
+			// Resource resource = resourceLoader.getResource("classpath:biz/userVipCode.json");
+			Resource resource = resourceLoader.getResource("/userVipCode.json");
 			FileUtil.writeString(jsonArray.toStringPretty(), resource.getFile(), StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			log.error("更新兑换码文件失败", e);

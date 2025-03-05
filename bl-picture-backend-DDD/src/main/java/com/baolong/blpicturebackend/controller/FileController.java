@@ -1,12 +1,12 @@
 package com.baolong.blpicturebackend.controller;
 
-import com.baolong.blpicturebackend.annotation.AuthCheck;
-import com.baolong.blpicturebackend.comment.BaseResponse;
-import com.baolong.blpicturebackend.comment.ResultUtils;
-import com.baolong.blpicturebackend.constant.UserConstant;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.manager.CosManager;
+import com.baolong.picture.infrastructure.annotation.AuthCheck;
+import com.baolong.picture.infrastructure.comment.BaseResponse;
+import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.domain.user.constant.UserConstant;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.api.CosManager;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;

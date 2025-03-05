@@ -3,22 +3,22 @@ package com.baolong.blpicturebackend.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
-import com.baolong.blpicturebackend.mapper.SpaceUserMapper;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.mapper.SpaceUserMapper;
 import com.baolong.blpicturebackend.model.dto.spaceUser.SpaceUserAddRequest;
 import com.baolong.blpicturebackend.model.dto.spaceUser.SpaceUserQueryRequest;
 import com.baolong.blpicturebackend.model.entity.Space;
 import com.baolong.blpicturebackend.model.entity.SpaceUser;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.enums.SpaceRoleEnum;
 import com.baolong.blpicturebackend.model.vo.SpaceUserVO;
 import com.baolong.blpicturebackend.model.vo.SpaceVO;
-import com.baolong.blpicturebackend.model.vo.UserVO;
+import com.baolong.picture.interfaces.vo.user.UserVO;
 import com.baolong.blpicturebackend.service.SpaceService;
 import com.baolong.blpicturebackend.service.SpaceUserService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
@@ -43,7 +43,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
 		implements SpaceUserService {
 
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 	@Resource
 	@Lazy
 	private SpaceService spaceService;
@@ -81,7 +81,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
 		Long userId = spaceUser.getUserId();
 		if (add) {
 			ThrowUtils.throwIf(ObjectUtil.hasEmpty(spaceId, userId), ErrorCode.PARAMS_ERROR);
-			User user = userService.getById(userId);
+			User user = userApplicationService.getUserById(userId);
 			ThrowUtils.throwIf(user == null, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
 			Space space = spaceService.getById(spaceId);
 			ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
@@ -132,8 +132,8 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
 		// 关联查询用户信息
 		Long userId = spaceUser.getUserId();
 		if (userId != null && userId > 0) {
-			User user = userService.getById(userId);
-			UserVO userVO = userService.getUserVO(user);
+			User user = userApplicationService.getUserById(userId);
+			UserVO userVO = userApplicationService.getUserVO(user);
 			spaceUserVO.setUser(userVO);
 		}
 		// 关联查询空间信息
@@ -164,7 +164,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
 		Set<Long> userIdSet = spaceUserList.stream().map(SpaceUser::getUserId).collect(Collectors.toSet());
 		Set<Long> spaceIdSet = spaceUserList.stream().map(SpaceUser::getSpaceId).collect(Collectors.toSet());
 		// 2. 批量查询用户和空间
-		Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
+		Map<Long, List<User>> userIdUserListMap = userApplicationService.listUserByIds(userIdSet).stream()
 				.collect(Collectors.groupingBy(User::getId));
 		Map<Long, List<Space>> spaceIdSpaceListMap = spaceService.listByIds(spaceIdSet).stream()
 				.collect(Collectors.groupingBy(Space::getId));
@@ -177,7 +177,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
 			if (userIdUserListMap.containsKey(userId)) {
 				user = userIdUserListMap.get(userId).get(0);
 			}
-			spaceUserVO.setUser(userService.getUserVO(user));
+			spaceUserVO.setUser(userApplicationService.getUserVO(user));
 			// 填充空间信息
 			Space space = null;
 			if (spaceIdSpaceListMap.containsKey(spaceId)) {

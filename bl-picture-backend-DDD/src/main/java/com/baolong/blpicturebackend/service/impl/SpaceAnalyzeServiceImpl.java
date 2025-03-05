@@ -2,9 +2,9 @@ package com.baolong.blpicturebackend.service.impl;
 
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ObjUtil;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.blpicturebackend.model.dto.analyze.SpaceAnalyzeRequest;
 import com.baolong.blpicturebackend.model.dto.analyze.SpaceCategoryAnalyzeRequest;
 import com.baolong.blpicturebackend.model.dto.analyze.SpaceRankAnalyzeRequest;
@@ -15,7 +15,7 @@ import com.baolong.blpicturebackend.model.dto.analyze.SpaceUserAnalyzeRequest;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.model.entity.Picture;
 import com.baolong.blpicturebackend.model.entity.Space;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.vo.analyze.SpaceCategoryAnalyzeResponse;
 import com.baolong.blpicturebackend.model.vo.analyze.SpaceSizeAnalyzeResponse;
 import com.baolong.blpicturebackend.model.vo.analyze.SpaceTagAnalyzeResponse;
@@ -25,7 +25,7 @@ import com.baolong.blpicturebackend.service.CategoryTagService;
 import com.baolong.blpicturebackend.service.PictureService;
 import com.baolong.blpicturebackend.service.SpaceAnalyzeService;
 import com.baolong.blpicturebackend.service.SpaceService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 @Service
 public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 	@Resource
 	private SpaceService spaceService;
 	@Resource
@@ -71,7 +71,7 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
 		if (spaceUsageAnalyzeRequest.isQueryAll() || spaceUsageAnalyzeRequest.isQueryPublic()) {
 			// 查询全部或公共图库逻辑
 			// 仅管理员可以访问
-			boolean isAdmin = userService.isAdmin(loginUser);
+			boolean isAdmin = loginUser.isAdmin();
 			ThrowUtils.throwIf(!isAdmin, ErrorCode.NO_AUTH_ERROR, "无权访问空间");
 			// 统计公共图库的资源使用
 			QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
@@ -298,7 +298,7 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
 		ThrowUtils.throwIf(spaceRankAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
 
 		// 仅管理员可查看空间排行
-		ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "无权查看空间排行");
+		ThrowUtils.throwIf(!loginUser.isAdmin(), ErrorCode.NO_AUTH_ERROR, "无权查看空间排行");
 
 		// 构造查询条件
 		QueryWrapper<Space> queryWrapper = new QueryWrapper<>();
@@ -320,7 +320,7 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
 		// 检查权限
 		if (spaceAnalyzeRequest.isQueryAll() || spaceAnalyzeRequest.isQueryPublic()) {
 			// 全空间分析或者公共图库权限校验：仅管理员可访问
-			ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "无权访问公共图库");
+			ThrowUtils.throwIf(!loginUser.isAdmin(), ErrorCode.NO_AUTH_ERROR, "无权访问公共图库");
 		} else {
 			// 私有空间权限校验
 			Long spaceId = spaceAnalyzeRequest.getSpaceId();

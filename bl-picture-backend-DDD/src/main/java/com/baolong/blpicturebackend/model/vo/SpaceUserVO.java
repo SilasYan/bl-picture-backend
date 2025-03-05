@@ -1,6 +1,7 @@
 package com.baolong.blpicturebackend.model.vo;
 
 import com.baolong.blpicturebackend.model.entity.SpaceUser;
+import com.baolong.picture.interfaces.vo.user.UserVO;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 

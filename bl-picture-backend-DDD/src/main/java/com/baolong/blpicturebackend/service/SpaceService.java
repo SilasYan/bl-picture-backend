@@ -3,7 +3,7 @@ package com.baolong.blpicturebackend.service;
 import com.baolong.blpicturebackend.model.dto.space.SpaceAddRequest;
 import com.baolong.blpicturebackend.model.dto.space.SpaceQueryRequest;
 import com.baolong.blpicturebackend.model.entity.Space;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.vo.SpaceVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

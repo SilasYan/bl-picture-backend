@@ -3,23 +3,23 @@ package com.baolong.blpicturebackend.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
-import com.baolong.blpicturebackend.mapper.SpaceMapper;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.mapper.SpaceMapper;
 import com.baolong.blpicturebackend.model.dto.space.SpaceAddRequest;
 import com.baolong.blpicturebackend.model.dto.space.SpaceQueryRequest;
 import com.baolong.blpicturebackend.model.entity.Space;
 import com.baolong.blpicturebackend.model.entity.SpaceUser;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.enums.SpaceLevelEnum;
 import com.baolong.blpicturebackend.model.enums.SpaceRoleEnum;
 import com.baolong.blpicturebackend.model.enums.SpaceTypeEnum;
 import com.baolong.blpicturebackend.model.vo.SpaceVO;
-import com.baolong.blpicturebackend.model.vo.UserVO;
+import com.baolong.picture.interfaces.vo.user.UserVO;
 import com.baolong.blpicturebackend.service.SpaceService;
 import com.baolong.blpicturebackend.service.SpaceUserService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -46,7 +46,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 		implements SpaceService {
 
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 
 	@Resource
 	private SpaceUserService spaceUserService;
@@ -160,8 +160,8 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 		// 关联查询用户信息
 		Long userId = space.getUserId();
 		if (userId != null && userId > 0) {
-			User user = userService.getById(userId);
-			UserVO userVO = userService.getUserVO(user);
+			User user = userApplicationService.getUserById(userId);
+			UserVO userVO = userApplicationService.getUserVO(user);
 			spaceVO.setUser(userVO);
 		}
 		return spaceVO;
@@ -185,7 +185,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 		List<SpaceVO> spaceVOList = spaceList.stream().map(SpaceVO::objToVo).collect(Collectors.toList());
 		// 1. 关联查询用户信息
 		Set<Long> userIdSet = spaceList.stream().map(Space::getUserId).collect(Collectors.toSet());
-		Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
+		Map<Long, List<User>> userIdUserListMap = userApplicationService.listUserByIds(userIdSet).stream()
 				.collect(Collectors.groupingBy(User::getId));
 		// 2. 填充信息
 		spaceVOList.forEach(spaceVO -> {
@@ -194,7 +194,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 			if (userIdUserListMap.containsKey(userId)) {
 				user = userIdUserListMap.get(userId).get(0);
 			}
-			spaceVO.setUser(userService.getUserVO(user));
+			spaceVO.setUser(userApplicationService.getUserVO(user));
 		});
 		spaceVOPage.setRecords(spaceVOList);
 		return spaceVOPage;
@@ -229,7 +229,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 		Long userId = loginUser.getId();
 		space.setUserId(userId);
 		// 权限校验
-		if (SpaceLevelEnum.COMMON.getValue() != spaceAddRequest.getSpaceLevel() && !userService.isAdmin(loginUser)) {
+		if (SpaceLevelEnum.COMMON.getValue() != spaceAddRequest.getSpaceLevel() && !loginUser.isAdmin()) {
 			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限创建指定级别的空间");
 		}
 		// 针对用户进行加锁
@@ -277,7 +277,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 	@Override
 	public void checkSpaceAuth(User loginUser, Space space) {
 		// 仅本人或管理员可编辑
-		if (!space.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
+		if (!space.getUserId().equals(loginUser.getId()) && !loginUser.isAdmin()) {
 			throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
 		}
 	}

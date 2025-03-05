@@ -1,25 +1,25 @@
 package com.baolong.blpicturebackend.controller;
 
-import com.baolong.blpicturebackend.annotation.AuthCheck;
+import com.baolong.picture.infrastructure.annotation.AuthCheck;
 import com.baolong.blpicturebackend.auth.SpaceUserAuthManager;
-import com.baolong.blpicturebackend.comment.BaseResponse;
-import com.baolong.blpicturebackend.comment.DeleteRequest;
-import com.baolong.blpicturebackend.comment.ResultUtils;
-import com.baolong.blpicturebackend.constant.UserConstant;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.comment.BaseResponse;
+import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.domain.user.constant.UserConstant;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.blpicturebackend.model.dto.space.SpaceAddRequest;
 import com.baolong.blpicturebackend.model.dto.space.SpaceEditRequest;
 import com.baolong.blpicturebackend.model.dto.space.SpaceLevel;
 import com.baolong.blpicturebackend.model.dto.space.SpaceQueryRequest;
 import com.baolong.blpicturebackend.model.dto.space.SpaceUpdateRequest;
 import com.baolong.blpicturebackend.model.entity.Space;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.enums.SpaceLevelEnum;
 import com.baolong.blpicturebackend.model.vo.SpaceVO;
 import com.baolong.blpicturebackend.service.SpaceService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 public class SpaceController {
 
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 	@Resource
 	private SpaceService spaceService;
 	@Resource
@@ -54,7 +54,7 @@ public class SpaceController {
 	@PostMapping("/add")
 	public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request) {
 		ThrowUtils.throwIf(spaceAddRequest == null, ErrorCode.PARAMS_ERROR);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		long newId = spaceService.addSpace(spaceAddRequest, loginUser);
 		return ResultUtils.success(newId);
 	}
@@ -67,7 +67,7 @@ public class SpaceController {
 		if (deleteRequest == null || deleteRequest.getId() <= 0) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR);
 		}
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		long id = deleteRequest.getId();
 		// 判断是否存在
 		Space oldSpace = spaceService.getById(id);
@@ -129,7 +129,7 @@ public class SpaceController {
 		Space space = spaceService.getById(id);
 		ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
 		SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
 		spaceVO.setPermissionList(permissionList);
 		// 获取封装类
@@ -178,7 +178,7 @@ public class SpaceController {
 		// 在此处将实体类和 DTO 进行转换
 		Space space = new Space();
 		BeanUtils.copyProperties(spaceEditRequest, space);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		// 设置编辑时间
 		space.setEditTime(new Date());
 		// 填充空间等级参数

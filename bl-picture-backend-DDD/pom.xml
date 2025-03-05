@@ -165,7 +165,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>com.baolong.blpicturebackend.BlPictureBackendApplication</mainClass>
+                    <mainClass>com.baolong.picture.BlPictureBackendApplication</mainClass>
                     <!-- 这里需要注释, 因为打包会忽略主类 -->
                     <!--<skip>true</skip>-->
                 </configuration>

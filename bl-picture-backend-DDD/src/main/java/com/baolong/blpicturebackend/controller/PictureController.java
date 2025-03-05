@@ -3,25 +3,25 @@ package com.baolong.blpicturebackend.controller;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
-import com.baolong.blpicturebackend.annotation.AuthCheck;
-import com.baolong.blpicturebackend.api.aliyunai.AliYunAiApi;
-import com.baolong.blpicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
-import com.baolong.blpicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
-import com.baolong.blpicturebackend.api.imageSearch.baidu.ImageSearchApiFacade;
-import com.baolong.blpicturebackend.api.imageSearch.baidu.model.ImageSearchResult;
-import com.baolong.blpicturebackend.api.imageSearch.so.SoImageSearchApiFacade;
-import com.baolong.blpicturebackend.api.imageSearch.so.model.SoImageSearchResult;
+import com.baolong.picture.infrastructure.annotation.AuthCheck;
+import com.baolong.picture.infrastructure.api.aliyunai.AliYunAiApi;
+import com.baolong.picture.infrastructure.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.baolong.picture.infrastructure.api.aliyunai.model.GetOutPaintingTaskResponse;
+import com.baolong.picture.infrastructure.api.imageSearch.baidu.ImageSearchApiFacade;
+import com.baolong.picture.infrastructure.api.imageSearch.baidu.model.ImageSearchResult;
+import com.baolong.picture.infrastructure.api.imageSearch.so.SoImageSearchApiFacade;
+import com.baolong.picture.infrastructure.api.imageSearch.so.model.SoImageSearchResult;
 import com.baolong.blpicturebackend.auth.SpaceUserAuthManager;
 import com.baolong.blpicturebackend.auth.StpKit;
 import com.baolong.blpicturebackend.auth.annotation.SaSpaceCheckPermission;
 import com.baolong.blpicturebackend.auth.model.SpaceUserPermissionConstant;
-import com.baolong.blpicturebackend.comment.BaseResponse;
-import com.baolong.blpicturebackend.comment.DeleteRequest;
-import com.baolong.blpicturebackend.comment.ResultUtils;
-import com.baolong.blpicturebackend.constant.UserConstant;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.comment.BaseResponse;
+import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.domain.user.constant.UserConstant;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.blpicturebackend.model.dto.picture.CreatePictureOutPaintingTaskRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
@@ -35,7 +35,7 @@ import com.baolong.blpicturebackend.model.dto.picture.SearchPictureByPictureRequ
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.model.entity.Picture;
 import com.baolong.blpicturebackend.model.entity.Space;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.enums.CategoryTagEnum;
 import com.baolong.blpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.baolong.blpicturebackend.model.vo.PictureTagCategory;
@@ -43,7 +43,7 @@ import com.baolong.blpicturebackend.model.vo.PictureVO;
 import com.baolong.blpicturebackend.service.CategoryTagService;
 import com.baolong.blpicturebackend.service.PictureService;
 import com.baolong.blpicturebackend.service.SpaceService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -76,7 +76,7 @@ import java.util.stream.Collectors;
 public class PictureController {
 
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 	@Resource
 	private PictureService pictureService;
 	@Resource
@@ -100,7 +100,7 @@ public class PictureController {
 			@RequestPart("file") MultipartFile multipartFile,
 			PictureUploadRequest pictureUploadRequest,
 			HttpServletRequest request) {
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
 		return ResultUtils.success(pictureVO);
 	}
@@ -113,7 +113,7 @@ public class PictureController {
 	public BaseResponse<PictureVO> uploadPictureByUrl(
 			@RequestBody PictureUploadRequest pictureUploadRequest,
 			HttpServletRequest request) {
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		String fileUrl = pictureUploadRequest.getFileUrl();
 		PictureVO pictureVO = pictureService.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
 		return ResultUtils.success(pictureVO);
@@ -128,7 +128,7 @@ public class PictureController {
 		if (deleteRequest == null || deleteRequest.getId() <= 0) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR);
 		}
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		pictureService.deletePicture(deleteRequest.getId(), loginUser);
 		return ResultUtils.success(true);
 	}
@@ -149,7 +149,7 @@ public class PictureController {
 		/*// 注意将 list 转为 string
 		picture.setTags(JSONUtil.toJsonStr(pictureUpdateRequest.getTags()));*/
 
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		List<String> inputTagList = pictureUpdateRequest.getTags();
 		// 使用分类标签表的方式
 		if (pictureUpdateRequest.getInputTagList() != null && !pictureUpdateRequest.getInputTagList().isEmpty()) {
@@ -196,7 +196,7 @@ public class PictureController {
 		// 空间权限校验
 		Long spaceId = picture.getSpaceId();
 		if (spaceId != null) {
-			User loginUser = userService.getLoginUser(request);
+			User loginUser = userApplicationService.getLoginUser(request);
 			pictureService.checkPictureAuth(loginUser, picture);
 		}
 
@@ -225,7 +225,7 @@ public class PictureController {
 		// 获取权限列表
 		User loginUser = null;
 		try {
-			loginUser = userService.getLoginUser(request);
+			loginUser = userApplicationService.getLoginUser(request);
 		} catch (Exception e) {
 			log.info("未登录");
 		}
@@ -303,7 +303,7 @@ public class PictureController {
 			boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
 			ThrowUtils.throwIf(!hasPermission, ErrorCode.NO_AUTH_ERROR);
 			// 私有空间
-			User loginUser = userService.getLoginUser(request);
+			User loginUser = userApplicationService.getLoginUser(request);
 			Space space = spaceService.getById(spaceId);
 			ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
 			// if (!loginUser.getId().equals(space.getUserId())) {
@@ -473,7 +473,7 @@ public class PictureController {
 		// 在此处将实体类和 DTO 进行转换
 		Picture picture = new Picture();
 		BeanUtils.copyProperties(pictureEditRequest, picture);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		pictureService.editPicture(pictureEditRequest, loginUser);
 		return ResultUtils.success(true);
 	}
@@ -496,7 +496,7 @@ public class PictureController {
 	public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureReviewRequest,
 												 HttpServletRequest request) {
 		ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		pictureService.doPictureReview(pictureReviewRequest, loginUser);
 		return ResultUtils.success(true);
 	}
@@ -510,7 +510,7 @@ public class PictureController {
 			@RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
 			HttpServletRequest request) {
 		ThrowUtils.throwIf(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 
 		List<String> tagList = pictureUploadByBatchRequest.getTags();
 		// 使用分类标签表的方式
@@ -581,7 +581,7 @@ public class PictureController {
 		ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR);
 		String picColor = searchPictureByColorRequest.getPicColor();
 		Long spaceId = searchPictureByColorRequest.getSpaceId();
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		List<PictureVO> result = pictureService.searchPictureByColor(spaceId, picColor, loginUser);
 		return ResultUtils.success(result);
 	}
@@ -593,7 +593,7 @@ public class PictureController {
 	@SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
 	public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
 		ThrowUtils.throwIf(pictureEditByBatchRequest == null, ErrorCode.PARAMS_ERROR);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
 		return ResultUtils.success(true);
 	}
@@ -609,7 +609,7 @@ public class PictureController {
 		if (createPictureOutPaintingTaskRequest == null || createPictureOutPaintingTaskRequest.getPictureId() == null) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR);
 		}
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		CreateOutPaintingTaskResponse response = pictureService.createPictureOutPaintingTask(createPictureOutPaintingTaskRequest, loginUser);
 		return ResultUtils.success(response);
 	}

@@ -5,18 +5,18 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
-import com.baolong.blpicturebackend.api.aliyunai.AliYunAiApi;
-import com.baolong.blpicturebackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
-import com.baolong.blpicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
-import com.baolong.blpicturebackend.manager.CosManager;
+import com.baolong.picture.infrastructure.api.aliyunai.AliYunAiApi;
+import com.baolong.picture.infrastructure.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import com.baolong.picture.infrastructure.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.api.CosManager;
 import com.baolong.blpicturebackend.manager.FileManager;
 import com.baolong.blpicturebackend.manager.upload.FilePictureUpload;
 import com.baolong.blpicturebackend.manager.upload.PictureUploadTemplate;
 import com.baolong.blpicturebackend.manager.upload.UrlPictureUpload;
-import com.baolong.blpicturebackend.mapper.PictureMapper;
+import com.baolong.picture.infrastructure.mapper.PictureMapper;
 import com.baolong.blpicturebackend.model.dto.picture.CreatePictureOutPaintingTaskRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditByBatchRequest;
 import com.baolong.blpicturebackend.model.dto.picture.PictureEditRequest;
@@ -28,16 +28,16 @@ import com.baolong.blpicturebackend.model.dto.picture.UploadPictureResult;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.model.entity.Picture;
 import com.baolong.blpicturebackend.model.entity.Space;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.enums.CategoryTagEnum;
 import com.baolong.blpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.baolong.blpicturebackend.model.vo.PictureVO;
-import com.baolong.blpicturebackend.model.vo.UserVO;
+import com.baolong.picture.interfaces.vo.user.UserVO;
 import com.baolong.blpicturebackend.service.CategoryTagService;
 import com.baolong.blpicturebackend.service.PictureService;
 import com.baolong.blpicturebackend.service.SpaceService;
-import com.baolong.blpicturebackend.service.UserService;
-import com.baolong.blpicturebackend.utils.ColorSimilarUtils;
+import com.baolong.picture.application.service.UserApplicationService;
+import com.baolong.picture.infrastructure.utils.ColorSimilarUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -83,7 +83,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 	@Resource
 	private FileManager fileManager;
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 	@Resource
 	private CategoryTagService categoryTagService;
 	@Resource
@@ -246,7 +246,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 	 */
 	@Override
 	public void fillReviewParams(Picture picture, User loginUser) {
-		if (userService.isAdmin(loginUser)) {
+		if (loginUser.isAdmin()) {
 			// 管理员自动过审
 			picture.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
 			picture.setReviewerId(loginUser.getId());
@@ -294,8 +294,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 		// 关联查询用户信息
 		Long userId = picture.getUserId();
 		if (userId != null && userId > 0) {
-			User user = userService.getById(userId);
-			UserVO userVO = userService.getUserVO(user);
+			User user = userApplicationService.getUserById(userId);
+			UserVO userVO = userApplicationService.getUserVO(user);
 			pictureVO.setUser(userVO);
 		}
 		// 查询当前图片的分类和标签的信息
@@ -347,7 +347,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 		List<PictureVO> pictureVOList = pictureList.stream().map(PictureVO::objToVo).collect(Collectors.toList());
 		// 1. 关联查询用户信息
 		Set<Long> userIdSet = pictureList.stream().map(Picture::getUserId).collect(Collectors.toSet());
-		Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
+		Map<Long, List<User>> userIdUserListMap = userApplicationService.listUserByIds(userIdSet).stream()
 				.collect(Collectors.groupingBy(User::getId));
 		// 2. 填充信息
 		pictureVOList.forEach(pictureVO -> {
@@ -356,7 +356,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 			if (userIdUserListMap.containsKey(userId)) {
 				user = userIdUserListMap.get(userId).get(0);
 			}
-			pictureVO.setUser(userService.getUserVO(user));
+			pictureVO.setUser(userApplicationService.getUserVO(user));
 			// 查询当前图片的分类和标签信息
 			List<String> ctIds = new ArrayList<>();
 			if (pictureVO.getTags() != null && !pictureVO.getTags().isEmpty()) {
@@ -733,7 +733,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 		Long spaceId = picture.getSpaceId();
 		if (spaceId == null) {
 			// 公共图库，仅本人或管理员可操作
-			if (!picture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
+			if (!picture.getUserId().equals(loginUser.getId()) && !loginUser.isAdmin()) {
 				throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
 			}
 		} else {

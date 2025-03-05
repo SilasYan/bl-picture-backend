@@ -3,7 +3,7 @@ package com.baolong.blpicturebackend.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
 import com.baolong.blpicturebackend.service.CategoryTagService;
-import com.baolong.blpicturebackend.mapper.CategoryTagMapper;
+import com.baolong.picture.infrastructure.mapper.CategoryTagMapper;
 import org.springframework.stereotype.Service;
 
 /**

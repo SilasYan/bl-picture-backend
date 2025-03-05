@@ -2,24 +2,24 @@ package com.baolong.blpicturebackend.controller;
 
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baolong.blpicturebackend.annotation.AuthCheck;
-import com.baolong.blpicturebackend.comment.BaseResponse;
-import com.baolong.blpicturebackend.comment.DeleteRequest;
-import com.baolong.blpicturebackend.comment.ResultUtils;
-import com.baolong.blpicturebackend.constant.UserConstant;
-import com.baolong.blpicturebackend.exception.BusinessException;
-import com.baolong.blpicturebackend.exception.ErrorCode;
-import com.baolong.blpicturebackend.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.annotation.AuthCheck;
+import com.baolong.picture.infrastructure.comment.BaseResponse;
+import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.domain.user.constant.UserConstant;
+import com.baolong.picture.infrastructure.exception.BusinessException;
+import com.baolong.picture.infrastructure.exception.ErrorCode;
+import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.blpicturebackend.model.dto.category.CategoryAddRequest;
 import com.baolong.blpicturebackend.model.dto.category.CategoryQueryRequest;
 import com.baolong.blpicturebackend.model.dto.category.CategoryUpdateRequest;
 import com.baolong.blpicturebackend.model.entity.CategoryTag;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.enums.CategoryTagEnum;
 import com.baolong.blpicturebackend.model.vo.CategoryTagVO;
 import com.baolong.blpicturebackend.model.vo.PictureTagCategory;
 import com.baolong.blpicturebackend.service.CategoryTagService;
-import com.baolong.blpicturebackend.service.UserService;
+import com.baolong.picture.application.service.UserApplicationService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 public class CategoryTagController {
 
 	@Resource
-	private UserService userService;
+	private UserApplicationService userApplicationService;
 	@Resource
 	private CategoryTagService categoryTagService;
 
@@ -134,7 +134,7 @@ public class CategoryTagController {
 		// 将实体类和 DTO 进行转换
 		CategoryTag categoryTag = new CategoryTag();
 		BeanUtils.copyProperties(categoryAddRequest, categoryTag);
-		User loginUser = userService.getLoginUser(request);
+		User loginUser = userApplicationService.getLoginUser(request);
 		categoryTag.setUserId(loginUser.getId());
 
 		// 操作数据库

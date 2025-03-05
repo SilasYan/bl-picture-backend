@@ -7,7 +7,7 @@ import com.baolong.blpicturebackend.model.dto.analyze.SpaceTagAnalyzeRequest;
 import com.baolong.blpicturebackend.model.dto.analyze.SpaceUsageAnalyzeRequest;
 import com.baolong.blpicturebackend.model.dto.analyze.SpaceUserAnalyzeRequest;
 import com.baolong.blpicturebackend.model.entity.Space;
-import com.baolong.blpicturebackend.model.entity.User;
+import com.baolong.picture.domain.user.entity.User;
 import com.baolong.blpicturebackend.model.vo.analyze.SpaceCategoryAnalyzeResponse;
 import com.baolong.blpicturebackend.model.vo.analyze.SpaceSizeAnalyzeResponse;
 import com.baolong.blpicturebackend.model.vo.analyze.SpaceTagAnalyzeResponse;

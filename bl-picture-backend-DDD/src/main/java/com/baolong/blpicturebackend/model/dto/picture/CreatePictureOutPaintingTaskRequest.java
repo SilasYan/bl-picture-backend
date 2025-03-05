@@ -1,6 +1,6 @@
 package com.baolong.blpicturebackend.model.dto.picture;
 
-import com.baolong.blpicturebackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import com.baolong.picture.infrastructure.api.aliyunai.model.CreateOutPaintingTaskRequest;
 import lombok.Data;
 
 import java.io.Serializable;
