@@ -3,7 +3,7 @@ package com.baolong.picture.domain.user.service.impl;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baolong.blpicturebackend.auth.StpKit;
+import com.baolong.picture.shared.auth.StpKit;
 import com.baolong.picture.domain.user.constant.UserConstant;
 import com.baolong.picture.domain.user.entity.User;
 import com.baolong.picture.domain.user.enums.UserRoleEnum;
