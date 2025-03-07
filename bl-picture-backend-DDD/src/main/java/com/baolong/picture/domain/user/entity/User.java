@@ -1,5 +1,8 @@
 package com.baolong.picture.domain.user.entity;
 
+import cn.hutool.core.lang.RegexPool;
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baolong.picture.domain.user.enums.UserRoleEnum;
 import com.baolong.picture.infrastructure.exception.BusinessException;
@@ -10,6 +13,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.experimental.Accessors;
+import org.springframework.util.DigestUtils;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -19,6 +24,7 @@ import java.util.Date;
  */
 @TableName(value = "user")
 @Data
+@Accessors(chain = true)
 public class User implements Serializable {
 	/**
 	 * id
@@ -126,25 +132,28 @@ public class User implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	/**
+	 * 校验用户邮箱
+	 *
+	 * @param userEmail 用户邮箱
+	 */
+	public static void validUserEmail(String userEmail) {
+		if (StrUtil.isEmpty(userEmail) || !ReUtil.isMatch(RegexPool.EMAIL, userEmail)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱格式错误");
+		}
+	}
+
+	/**
 	 * 校验用户注册
 	 *
-	 * @param userAccount   用户账号
-	 * @param userPassword  用户密码
-	 * @param checkPassword 确认密码
+	 * @param userEmail 用户邮箱
+	 * @param codeKey   验证码 key
+	 * @param codeValue 验证码 value
 	 */
-	public static void validUserRegister(String userAccount, String userPassword, String checkPassword) {
-		if (StrUtil.hasBlank(userAccount, userPassword, checkPassword)) {
+	public static void validUserRegister(String userEmail, String codeKey, String codeValue) {
+		if (StrUtil.hasBlank(userEmail, codeKey, codeValue)) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
 		}
-		if (userAccount.length() < 4) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
-		}
-		if (userPassword.length() < 8 || checkPassword.length() < 8) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
-		}
-		if (!userPassword.equals(checkPassword)) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
-		}
+		validUserEmail(userEmail);
 	}
 
 	/**
@@ -153,13 +162,35 @@ public class User implements Serializable {
 	 * @param userAccount  用户账号
 	 * @param userPassword 用户密码
 	 */
-	public static void validUserLogin(String userAccount, String userPassword) {
-		if (StrUtil.hasBlank(userAccount, userPassword)) {
+	public static void validUserLogin(String userAccount, String userPassword, String captchaKey, String captchaCode) {
+		if (StrUtil.hasBlank(userAccount, userPassword, captchaKey, captchaCode)) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
 		}
 		if (userAccount.length() < 4 || userPassword.length() < 8) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号或密码错误");
 		}
+	}
+
+	/**
+	 * 填充默认值
+	 */
+	public void fillDefaultValue() {
+		String random = RandomUtil.randomString(6);
+		this.setUserAccount("user_" + random);
+		this.setUserName("用户_" + random);
+		this.setUserRole(UserRoleEnum.USER.getValue());
+		this.setUserPassword(this.getEncryptPassword("12345678"));
+	}
+
+	/**
+	 * 获取加密的密码
+	 *
+	 * @param userPassword 用户密码
+	 * @return 加密后的密码
+	 */
+	public String getEncryptPassword(String userPassword) {
+		final String SALT = "baolong";
+		return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
 	}
 
 	/**

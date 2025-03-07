@@ -2,8 +2,8 @@ package com.baolong.picture.infrastructure.exception;
 
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
-import com.baolong.picture.infrastructure.comment.BaseResponse;
-import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.infrastructure.common.BaseResponse;
+import com.baolong.picture.infrastructure.common.ResultUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;

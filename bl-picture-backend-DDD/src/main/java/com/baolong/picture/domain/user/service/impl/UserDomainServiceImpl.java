@@ -1,20 +1,26 @@
 package com.baolong.picture.domain.user.service.impl;
 
+import cn.hutool.core.lang.RegexPool;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baolong.picture.shared.auth.StpKit;
 import com.baolong.picture.domain.user.constant.UserConstant;
 import com.baolong.picture.domain.user.entity.User;
-import com.baolong.picture.domain.user.enums.UserRoleEnum;
 import com.baolong.picture.domain.user.repository.UserRepository;
 import com.baolong.picture.domain.user.service.UserDomainService;
+import com.baolong.picture.infrastructure.common.entity.constant.CacheKeyConstant;
 import com.baolong.picture.infrastructure.exception.BusinessException;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;
+import com.baolong.picture.infrastructure.manager.message.EmailManager;
+import com.baolong.picture.infrastructure.manager.redis.RedisCache;
+import com.baolong.picture.infrastructure.utils.ServletUtils;
 import com.baolong.picture.interfaces.dto.user.UserQueryRequest;
 import com.baolong.picture.interfaces.vo.user.LoginUserVO;
 import com.baolong.picture.interfaces.vo.user.UserVO;
+import com.baolong.picture.shared.auth.StpKit;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +30,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +47,62 @@ import java.util.stream.Collectors;
 public class UserDomainServiceImpl implements UserDomainService {
 
 	private final UserRepository userRepository;
+	private final EmailManager emailManager;
+	private final RedisCache redisCache;
+
+	/**
+	 * 发送邮箱验证码
+	 *
+	 * @param userEmail 用户邮箱
+	 * @return 验证码 key
+	 */
+	@Override
+	public String sendEmailCode(String userEmail) {
+		Long count = userRepository.getBaseMapper().selectCount(new QueryWrapper<User>().eq("userEmail", userEmail));
+		ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号已存在, 请直接登录!");
+		// 发送验证码
+		String code = RandomUtil.randomNumbers(4);
+		Map<String, Object> contentMap = new HashMap<>();
+		contentMap.put("code", code);
+		emailManager.sendEmail(userEmail, "注册验证码 - 暴龙图库", contentMap);
+		// 生成一个唯一 ID, 后面注册前端需要带过来
+		String key = UUID.randomUUID().toString();
+		// 存入 Redis, 5 分钟过期
+		redisCache.set(String.format(CacheKeyConstant.EMAIL_CODE_KEY, key, userEmail), code, 5, TimeUnit.MINUTES);
+		return key;
+	}
+
+	/**
+	 * 用户注册
+	 *
+	 * @param userEmail 用户邮箱
+	 * @param codeKey   验证码 key
+	 * @param codeValue 验证码 value
+	 * @return 用户ID
+	 */
+	@Override
+	public Long userRegister(String userEmail, String codeKey, String codeValue) {
+		String KEY = String.format(CacheKeyConstant.EMAIL_CODE_KEY, codeKey, userEmail);
+		// 获取 Redis 中的验证码
+		String code = redisCache.get(KEY);
+		if (StrUtil.isEmpty(code) || !code.equals(codeValue)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+		}
+		Long count = userRepository.getBaseMapper().selectCount(new QueryWrapper<User>().eq("userEmail", userEmail));
+		ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号已存在, 请直接登录!");
+		// 构建参数
+		User user = new User();
+		// 默认值填充
+		user.fillDefaultValue();
+		user.setUserEmail(userEmail);
+		boolean result = userRepository.save(user);
+		if (!result) {
+			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
+		}
+		// 删除验证码
+		redisCache.delete(KEY);
+		return user.getId();
+	}
 
 	/**
 	 * 获取加密密码
@@ -51,63 +117,49 @@ public class UserDomainServiceImpl implements UserDomainService {
 		return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
 	}
 
-	// @Autowired
-	// private FilePictureUpload filePictureUpload;
-
-	/**
-	 * 用户注册
-	 *
-	 * @param userAccount  用户账户
-	 * @param userPassword 用户密码
-	 * @return 新用户 id
-	 */
-	@Override
-	public Long userRegister(String userAccount, String userPassword) {
-		// 查询是否已经存在该用户
-		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-		queryWrapper.eq("userAccount", userAccount);
-		long count = userRepository.getBaseMapper().selectCount(queryWrapper);
-		if (count > 0) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号已存在!");
-		}
-		// 插入数据
-		User user = new User();
-		user.setUserAccount(userAccount);
-		user.setUserPassword(this.getEncryptPassword(userPassword));
-		user.setUserName(userAccount + "_" + RandomUtil.randomString(6));
-		user.setUserRole(UserRoleEnum.USER.getValue());
-		boolean saveResult = userRepository.save(user);
-		if (!saveResult) {
-			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
-		}
-		return user.getId();
-	}
-
 	/**
 	 * 用户登录
 	 *
 	 * @param userAccount  用户账户
 	 * @param userPassword 用户密码
-	 * @param request      HttpServletRequest
-	 * @return 脱敏后的用户信息
+	 * @param captchaKey   图形验证码 key
+	 * @param captchaCode  图形验证码 验证码
+	 * @return 用户信息
 	 */
 	@Override
-	public LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
-		// 查询用户是否存在
-		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-		queryWrapper.eq("userAccount", userAccount);
-		queryWrapper.eq("userPassword", this.getEncryptPassword(userPassword));
-		User user = userRepository.getBaseMapper().selectOne(queryWrapper);
+	public User userLogin(String userAccount, String userPassword, String captchaKey, String captchaCode) {
+		String KEY = String.format(CacheKeyConstant.CAPTCHA_CODE_KEY, captchaKey);
+		// 获取 Redis 中的验证码
+		String code = redisCache.get(KEY);
+		if (StrUtil.isEmpty(code) || !code.equals(captchaCode)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+		}
+		// 构建账号/邮箱登录的请求条件
+		LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+		if (ReUtil.isMatch(RegexPool.EMAIL, userAccount)) {
+			// 邮箱登录
+			queryWrapper.eq(User::getUserEmail, userAccount);
+		} else {
+			// 账号登录
+			queryWrapper.eq(User::getUserAccount, userAccount);
+		}
+		User user = userRepository.getOne(queryWrapper);
 		if (user == null) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
 		}
-		// 记录用户的登录态到 Session, 已经配置到 Redis 中
-		request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
-		// 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
+		// 校验密码
+		String encryptPassword = user.getEncryptPassword(userPassword);
+		if (!user.getUserPassword().equals(encryptPassword)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
+		}
+		// 记录用户的登录态到 Session, 已经开启缓存到 Redis 中的配置
+		ServletUtils.getRequest().getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
+		// 记录用户登录态到 Sa-token，注意保证该用户信息与 SpringSession 中的信息过期时间一致
 		StpKit.SPACE.login(user.getId());
 		StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
-
-		return this.getLoginUserVO(user);
+		// 删除验证码
+		redisCache.delete(KEY);
+		return user;
 	}
 
 	/**

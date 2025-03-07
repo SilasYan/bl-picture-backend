@@ -6,7 +6,7 @@ import com.baolong.picture.domain.categoryTag.entity.CategoryTag;
 import com.baolong.picture.domain.categoryTag.enums.CategoryTagEnum;
 import com.baolong.picture.domain.categoryTag.service.CategoryTagDomainService;
 import com.baolong.picture.domain.user.entity.User;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.picture.interfaces.dto.categoryTag.CategoryQueryRequest;

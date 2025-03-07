@@ -1,4 +1,4 @@
-package com.baolong.picture.infrastructure.comment;
+package com.baolong.picture.infrastructure.common;
 
 import lombok.Data;
 

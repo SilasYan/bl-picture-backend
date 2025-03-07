@@ -1,8 +1,8 @@
 package com.baolong.picture.interfaces.controller;
 
 import com.baolong.picture.infrastructure.annotation.AuthCheck;
-import com.baolong.picture.infrastructure.comment.BaseResponse;
-import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.infrastructure.common.BaseResponse;
+import com.baolong.picture.infrastructure.common.ResultUtils;
 import com.baolong.picture.domain.user.constant.UserConstant;
 import com.baolong.picture.infrastructure.exception.BusinessException;
 import com.baolong.picture.infrastructure.exception.ErrorCode;

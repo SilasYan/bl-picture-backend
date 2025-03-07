@@ -1,7 +1,7 @@
 package com.baolong.picture.application.service;
 
 import com.baolong.picture.domain.categoryTag.entity.CategoryTag;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
 import com.baolong.picture.interfaces.dto.categoryTag.CategoryQueryRequest;
 import com.baolong.picture.interfaces.vo.categoryTag.CategoryVOAndTagVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

@@ -1,7 +1,7 @@
 package com.baolong.picture.application.service;
 
 import com.baolong.picture.domain.user.entity.User;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
 import com.baolong.picture.interfaces.dto.user.UserLoginRequest;
 import com.baolong.picture.interfaces.dto.user.UserQueryRequest;
 import com.baolong.picture.interfaces.dto.user.UserRegisterRequest;
@@ -20,12 +20,12 @@ import java.util.Set;
 public interface UserApplicationService {
 
 	/**
-	 * 获取加密密码
+	 * 发送邮箱验证码
 	 *
-	 * @param userPassword 用户密码
-	 * @return 加密后的密码
+	 * @param userRegisterRequest 用户注册请求
+	 * @return 验证码 key
 	 */
-	String getEncryptPassword(String userPassword);
+	String sendEmailCode(UserRegisterRequest userRegisterRequest);
 
 	/**
 	 * 用户注册
@@ -39,10 +39,17 @@ public interface UserApplicationService {
 	 * 用户登录
 	 *
 	 * @param userLoginRequest 用户登录请求
-	 * @param request          HttpServletRequest
 	 * @return 登录用户信息
 	 */
-	LoginUserVO userLogin(UserLoginRequest userLoginRequest, HttpServletRequest request);
+	LoginUserVO userLogin(UserLoginRequest userLoginRequest);
+
+	/**
+	 * 获取加密密码
+	 *
+	 * @param userPassword 用户密码
+	 * @return 加密后的密码
+	 */
+	String getEncryptPassword(String userPassword);
 
 	/**
 	 * 用户退出（退出登录）

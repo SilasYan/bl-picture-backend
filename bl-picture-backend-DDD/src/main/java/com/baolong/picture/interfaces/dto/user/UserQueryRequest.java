@@ -1,6 +1,6 @@
 package com.baolong.picture.interfaces.dto.user;
 
-import com.baolong.picture.infrastructure.comment.PageRequest;
+import com.baolong.picture.infrastructure.common.PageRequest;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

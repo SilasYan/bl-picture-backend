@@ -27,9 +27,9 @@ import com.baolong.picture.infrastructure.api.imageSearch.baidu.ImageSearchApiFa
 import com.baolong.picture.infrastructure.api.imageSearch.baidu.model.ImageSearchResult;
 import com.baolong.picture.infrastructure.api.imageSearch.so.SoImageSearchApiFacade;
 import com.baolong.picture.infrastructure.api.imageSearch.so.model.SoImageSearchResult;
-import com.baolong.picture.infrastructure.comment.BaseResponse;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
-import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.infrastructure.common.BaseResponse;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
+import com.baolong.picture.infrastructure.common.ResultUtils;
 import com.baolong.picture.infrastructure.exception.BusinessException;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;

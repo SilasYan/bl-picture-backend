@@ -2,13 +2,14 @@ package com.baolong.picture.application.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import com.baolong.picture.application.service.UserApplicationService;
-import com.baolong.picture.domain.user.constant.UserConstant;
 import com.baolong.picture.domain.user.entity.User;
 import com.baolong.picture.domain.user.service.UserDomainService;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
+import com.baolong.picture.domain.user.constant.UserConstant;
 import com.baolong.picture.infrastructure.exception.BusinessException;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;
+import com.baolong.picture.interfaces.assembler.UserAssembler;
 import com.baolong.picture.interfaces.dto.user.UserLoginRequest;
 import com.baolong.picture.interfaces.dto.user.UserQueryRequest;
 import com.baolong.picture.interfaces.dto.user.UserRegisterRequest;
@@ -35,18 +36,16 @@ public class UserApplicationServiceImpl implements UserApplicationService {
 
 	private final UserDomainService userDomainService;
 
-	// @Autowired
-	// private FilePictureUpload filePictureUpload;
-
 	/**
-	 * 获取加密密码
+	 * 发送邮箱验证码
 	 *
-	 * @param userPassword 用户密码
-	 * @return 加密后的密码
+	 * @param userRegisterRequest 用户注册请求
+	 * @return 验证码 key
 	 */
 	@Override
-	public String getEncryptPassword(String userPassword) {
-		return userDomainService.getEncryptPassword(userPassword);
+	public String sendEmailCode(UserRegisterRequest userRegisterRequest) {
+		User.validUserEmail(userRegisterRequest.getUserEmail());
+		return userDomainService.sendEmailCode(userRegisterRequest.getUserEmail());
 	}
 
 	/**
@@ -57,30 +56,39 @@ public class UserApplicationServiceImpl implements UserApplicationService {
 	 */
 	@Override
 	public Long userRegister(UserRegisterRequest userRegisterRequest) {
-		ThrowUtils.throwIf(userRegisterRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
-		String userAccount = userRegisterRequest.getUserAccount();
-		String userPassword = userRegisterRequest.getUserPassword();
-		String checkPassword = userRegisterRequest.getCheckPassword();
-		// 参数校验
-		User.validUserRegister(userAccount, userPassword, checkPassword);
-		return userDomainService.userRegister(userAccount, userPassword);
+		String userEmail = userRegisterRequest.getUserEmail();
+		String codeKey = userRegisterRequest.getCodeKey();
+		String codeValue = userRegisterRequest.getCodeValue();
+		User.validUserRegister(userEmail, codeKey, codeValue);
+		return userDomainService.userRegister(userEmail, codeKey, codeValue);
 	}
 
 	/**
 	 * 用户登录
 	 *
 	 * @param userLoginRequest 用户登录请求
-	 * @param request          HttpServletRequest
 	 * @return 登录用户信息
 	 */
 	@Override
-	public LoginUserVO userLogin(UserLoginRequest userLoginRequest, HttpServletRequest request) {
-		ThrowUtils.throwIf(userLoginRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
+	public LoginUserVO userLogin(UserLoginRequest userLoginRequest) {
 		String userAccount = userLoginRequest.getUserAccount();
 		String userPassword = userLoginRequest.getUserPassword();
-		// 参数校验
-		User.validUserLogin(userAccount, userPassword);
-		return userDomainService.userLogin(userAccount, userPassword, request);
+		String captchaKey = userLoginRequest.getCaptchaKey();
+		String captchaCode = userLoginRequest.getCaptchaCode();
+		User.validUserLogin(userAccount, userPassword, captchaKey, captchaCode);
+		User user = userDomainService.userLogin(userAccount, userPassword, captchaKey, captchaCode);
+		return UserAssembler.toLoginUserVO(user);
+	}
+
+	/**
+	 * 获取加密密码
+	 *
+	 * @param userPassword 用户密码
+	 * @return 加密后的密码
+	 */
+	@Override
+	public String getEncryptPassword(String userPassword) {
+		return userDomainService.getEncryptPassword(userPassword);
 	}
 
 	/**

@@ -17,6 +17,35 @@ import java.util.Set;
 public interface UserDomainService {
 
 	/**
+	 * 发送邮箱验证码
+	 *
+	 * @param userEmail 用户邮箱
+	 * @return 验证码 key
+	 */
+	String sendEmailCode(String userEmail);
+
+	/**
+	 * 用户注册
+	 *
+	 * @param userEmail 用户邮箱
+	 * @param codeKey   验证码 key
+	 * @param codeValue 验证码 value
+	 * @return 用户ID
+	 */
+	Long userRegister(String userEmail, String codeKey, String codeValue);
+
+	/**
+	 * 用户登录
+	 *
+	 * @param userAccount  用户账户
+	 * @param userPassword 用户密码
+	 * @param captchaKey   图形验证码 key
+	 * @param captchaCode  图形验证码 验证码
+	 * @return 用户信息
+	 */
+	User userLogin(String userAccount, String userPassword, String captchaKey, String captchaCode);
+
+	/**
 	 * 获取加密密码
 	 *
 	 * @param userPassword 用户密码
@@ -25,32 +54,13 @@ public interface UserDomainService {
 	String getEncryptPassword(String userPassword);
 
 	/**
-	 * 用户注册
-	 *
-	 * @param userAccount  用户账户
-	 * @param userPassword 用户密码
-	 * @return 新用户 id
-	 */
-	Long userRegister(String userAccount, String userPassword);
-
-	/**
-	 * 用户登录
-	 *
-	 * @param userAccount  用户账户
-	 * @param userPassword 用户密码
-	 * @param request      HttpServletRequest
-	 * @return 脱敏后的用户信息
-	 */
-	LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request);
-
-
-	/**
 	 * 用户退出（退出登录）
 	 *
 	 * @param request HttpServletRequest
 	 * @return 是否成功
 	 */
 	Boolean userLogout(HttpServletRequest request);
+
 	/**
 	 * 获取登录用户信息
 	 *

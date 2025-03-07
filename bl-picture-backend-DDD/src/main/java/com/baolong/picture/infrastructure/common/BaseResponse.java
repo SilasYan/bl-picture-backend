@@ -1,4 +1,4 @@
-package com.baolong.picture.infrastructure.comment;
+package com.baolong.picture.infrastructure.common;
 
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import lombok.Data;

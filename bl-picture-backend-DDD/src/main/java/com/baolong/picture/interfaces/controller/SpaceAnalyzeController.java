@@ -1,7 +1,7 @@
 package com.baolong.picture.interfaces.controller;
 
-import com.baolong.picture.infrastructure.comment.BaseResponse;
-import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.infrastructure.common.BaseResponse;
+import com.baolong.picture.infrastructure.common.ResultUtils;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.picture.interfaces.dto.space.analyze.SpaceCategoryAnalyzeRequest;

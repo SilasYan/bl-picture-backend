@@ -2,7 +2,7 @@ package com.baolong.picture.application.service;
 
 import com.baolong.picture.domain.space.entity.Space;
 import com.baolong.picture.domain.user.entity.User;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
 import com.baolong.picture.interfaces.dto.space.SpaceAddRequest;
 import com.baolong.picture.interfaces.dto.space.SpaceEditRequest;
 import com.baolong.picture.interfaces.dto.space.SpaceQueryRequest;

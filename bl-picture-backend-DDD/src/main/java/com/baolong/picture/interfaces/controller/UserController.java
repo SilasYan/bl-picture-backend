@@ -4,9 +4,9 @@ import com.baolong.picture.application.service.UserApplicationService;
 import com.baolong.picture.domain.user.constant.UserConstant;
 import com.baolong.picture.domain.user.entity.User;
 import com.baolong.picture.infrastructure.annotation.AuthCheck;
-import com.baolong.picture.infrastructure.comment.BaseResponse;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
-import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.infrastructure.common.BaseResponse;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
+import com.baolong.picture.infrastructure.common.ResultUtils;
 import com.baolong.picture.infrastructure.exception.BusinessException;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;
@@ -29,17 +29,31 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
+/**
+ * 用户接口
+ */
 @RestController
 @RequestMapping("/user")
 public class UserController {
+
 	@Resource
 	private UserApplicationService userApplicationService;
+
+	/**
+	 * 发送邮箱验证码
+	 */
+	@PostMapping("/send/email/code")
+	public BaseResponse<String> sendEmailCode(@RequestBody UserRegisterRequest userRegisterRequest) {
+		ThrowUtils.throwIf(userRegisterRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
+		return ResultUtils.success(userApplicationService.sendEmailCode(userRegisterRequest));
+	}
 
 	/**
 	 * 用户注册
 	 */
 	@PostMapping("/register")
 	public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
+		ThrowUtils.throwIf(userRegisterRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
 		return ResultUtils.success(userApplicationService.userRegister(userRegisterRequest));
 	}
 
@@ -47,8 +61,9 @@ public class UserController {
 	 * 用户登录
 	 */
 	@PostMapping("/login")
-	public BaseResponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
-		return ResultUtils.success(userApplicationService.userLogin(userLoginRequest, request));
+	public BaseResponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest) {
+		ThrowUtils.throwIf(userLoginRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
+		return ResultUtils.success(userApplicationService.userLogin(userLoginRequest));
 	}
 
 	/**

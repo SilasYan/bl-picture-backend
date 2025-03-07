@@ -1,14 +1,13 @@
 package com.baolong.picture.interfaces.controller;
 
 import com.baolong.picture.application.service.SpaceApplicationService;
-import com.baolong.picture.application.service.UserApplicationService;
 import com.baolong.picture.domain.space.entity.Space;
 import com.baolong.picture.domain.space.enums.SpaceLevelEnum;
 import com.baolong.picture.domain.user.constant.UserConstant;
 import com.baolong.picture.infrastructure.annotation.AuthCheck;
-import com.baolong.picture.infrastructure.comment.BaseResponse;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
-import com.baolong.picture.infrastructure.comment.ResultUtils;
+import com.baolong.picture.infrastructure.common.BaseResponse;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
+import com.baolong.picture.infrastructure.common.ResultUtils;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;
 import com.baolong.picture.interfaces.dto.space.SpaceAddRequest;
@@ -17,7 +16,6 @@ import com.baolong.picture.interfaces.dto.space.SpaceLevel;
 import com.baolong.picture.interfaces.dto.space.SpaceQueryRequest;
 import com.baolong.picture.interfaces.dto.space.SpaceUpdateRequest;
 import com.baolong.picture.interfaces.vo.space.SpaceVO;
-import com.baolong.picture.shared.auth.SpaceUserAuthManager;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;

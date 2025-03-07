@@ -3,6 +3,7 @@ package com.baolong.picture.interfaces.assembler;
 import com.baolong.picture.domain.user.entity.User;
 import com.baolong.picture.interfaces.dto.user.UserAddRequest;
 import com.baolong.picture.interfaces.dto.user.UserUpdateRequest;
+import com.baolong.picture.interfaces.vo.user.LoginUserVO;
 import org.springframework.beans.BeanUtils;
 
 /**
@@ -30,5 +31,14 @@ public class UserAssembler {
 		User user = new User();
 		BeanUtils.copyProperties(userUpdateRequest, user);
 		return user;
+	}
+
+	/**
+	 * 将用户实体转换为登录用户实体
+	 */
+	public static LoginUserVO toLoginUserVO(User user) {
+		LoginUserVO loginUserVO = new LoginUserVO();
+		BeanUtils.copyProperties(user, loginUserVO);
+		return loginUserVO;
 	}
 }

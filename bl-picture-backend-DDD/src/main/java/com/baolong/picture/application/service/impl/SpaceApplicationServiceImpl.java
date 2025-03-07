@@ -8,7 +8,7 @@ import com.baolong.picture.domain.space.entity.Space;
 import com.baolong.picture.domain.space.enums.SpaceLevelEnum;
 import com.baolong.picture.domain.space.service.SpaceDomainService;
 import com.baolong.picture.domain.user.entity.User;
-import com.baolong.picture.infrastructure.comment.DeleteRequest;
+import com.baolong.picture.infrastructure.common.DeleteRequest;
 import com.baolong.picture.infrastructure.exception.BusinessException;
 import com.baolong.picture.infrastructure.exception.ErrorCode;
 import com.baolong.picture.infrastructure.exception.ThrowUtils;
