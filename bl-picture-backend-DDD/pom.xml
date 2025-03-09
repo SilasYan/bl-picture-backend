@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.baolong</groupId>
-    <artifactId>bl-picture-backend-DDD</artifactId>
+    <artifactId>bl-tePicture-backend-DDD</artifactId>
     <version>0.0.2-SNAPSHOT</version>
-    <name>bl-picture-backend</name>
-    <description>bl-picture-backend</description>
+    <name>bl-tePicture-backend</name>
+    <description>bl-tePicture-backend</description>
     <properties>
         <java.version>11</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -179,7 +179,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>com.baolong.picture.BlPictureBackendApplication</mainClass>
+                    <mainClass>com.baolong.tePicture.BlPictureBackendApplication</mainClass>
                     <!-- 这里需要注释, 因为打包会忽略主类 -->
                     <!--<skip>true</skip>-->
                 </configuration>
