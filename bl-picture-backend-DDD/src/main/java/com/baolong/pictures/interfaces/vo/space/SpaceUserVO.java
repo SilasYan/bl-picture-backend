@@ -1,6 +1,6 @@
 package com.baolong.pictures.interfaces.vo.space;
 
-import com.baolong.pictures.interfaces.vo.user.UserVO;
+import com.baolong.pictures.interfaces.vo.user.UserDetailVO;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -40,7 +40,7 @@ public class SpaceUserVO implements Serializable {
 	/**
 	 * 用户信息
 	 */
-	private UserVO user;
+	private UserDetailVO user;
 
 	private static final long serialVersionUID = 1L;
 }

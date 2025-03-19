@@ -75,9 +75,9 @@ public class UserQueryRequest extends PageRequest implements Serializable {
 	private String shareCode;
 
 	/**
-	 * 邀请用户
+	 * 邀请用户 ID
 	 */
-	private Long inviteUser;
+	private Long inviteUserId;
 
 	private static final long serialVersionUID = 1L;
 }

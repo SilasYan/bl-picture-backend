@@ -20,7 +20,9 @@ public class CategoryAssembler {
 	 */
 	public static Category toCategoryEntity(CategoryAddRequest categoryAddRequest) {
 		Category category = new Category();
-		BeanUtils.copyProperties(categoryAddRequest, category);
+		if (categoryAddRequest != null) {
+			BeanUtils.copyProperties(categoryAddRequest, category);
+		}
 		return category;
 	}
 
@@ -29,7 +31,9 @@ public class CategoryAssembler {
 	 */
 	public static Category toCategoryEntity(CategoryUpdateRequest categoryUpdateRequest) {
 		Category category = new Category();
-		BeanUtils.copyProperties(categoryUpdateRequest, category);
+		if (categoryUpdateRequest != null) {
+			BeanUtils.copyProperties(categoryUpdateRequest, category);
+		}
 		return category;
 	}
 
@@ -38,7 +42,9 @@ public class CategoryAssembler {
 	 */
 	public static CategoryVO toCategoryVO(Category category) {
 		CategoryVO categoryVO = new CategoryVO();
-		BeanUtils.copyProperties(category, categoryVO);
+		if (category != null) {
+			BeanUtils.copyProperties(category, categoryVO);
+		}
 		return categoryVO;
 	}
 }

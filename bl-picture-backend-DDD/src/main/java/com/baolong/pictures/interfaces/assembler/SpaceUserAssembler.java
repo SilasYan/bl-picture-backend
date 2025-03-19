@@ -20,7 +20,9 @@ public class SpaceUserAssembler {
 	 */
 	public static SpaceUser toSpaceUserEntity(SpaceUserAddRequest spaceUserAddRequest) {
 		SpaceUser spaceUser = new SpaceUser();
-		BeanUtils.copyProperties(spaceUserAddRequest, spaceUser);
+		if (spaceUserAddRequest != null) {
+			BeanUtils.copyProperties(spaceUserAddRequest, spaceUser);
+		}
 		return spaceUser;
 	}
 
@@ -29,7 +31,9 @@ public class SpaceUserAssembler {
 	 */
 	public static SpaceUser toSpaceUserEntity(SpaceUserEditRequest spaceUserEditRequest) {
 		SpaceUser spaceUser = new SpaceUser();
-		BeanUtils.copyProperties(spaceUserEditRequest, spaceUser);
+		if (spaceUserEditRequest != null) {
+			BeanUtils.copyProperties(spaceUserEditRequest, spaceUser);
+		}
 		return spaceUser;
 	}
 
@@ -38,7 +42,9 @@ public class SpaceUserAssembler {
 	 */
 	public static SpaceUserVO toSpaceUserVO(SpaceUser spaceUser) {
 		SpaceUserVO spaceUserVO = new SpaceUserVO();
-		BeanUtils.copyProperties(spaceUser, spaceUserVO);
+		if (spaceUser != null) {
+			BeanUtils.copyProperties(spaceUser, spaceUserVO);
+		}
 		return spaceUserVO;
 	}
 }

@@ -2,17 +2,22 @@ package com.baolong.pictures.application.service;
 
 import com.baolong.pictures.domain.picture.entity.Picture;
 import com.baolong.pictures.domain.user.entity.User;
+import com.baolong.pictures.infrastructure.api.grab.model.GrabPictureResult;
 import com.baolong.pictures.infrastructure.common.DeleteRequest;
 import com.baolong.pictures.infrastructure.common.page.PageVO;
 import com.baolong.pictures.interfaces.dto.picture.PictureBatchEditRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureEditRequest;
+import com.baolong.pictures.interfaces.dto.picture.PictureGrabRequest;
+import com.baolong.pictures.interfaces.dto.picture.PictureInteractionRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureQueryRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureReviewRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUpdateRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUploadRequest;
-import com.baolong.pictures.interfaces.vo.picture.PictureSimpleVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureDetailVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureHomeVO;
 import com.baolong.pictures.interfaces.vo.picture.PictureVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.scheduling.annotation.Async;
 
 import java.util.List;
 
@@ -20,6 +25,42 @@ import java.util.List;
  * 图片应用服务接口
  */
 public interface PictureApplicationService {
+
+	// region 其他方法
+
+	/**
+	 * 获取查询条件对象（Lambda）
+	 *
+	 * @param pictureQueryRequest 图片查询请求
+	 * @return 查询条件对象（Lambda）
+	 */
+	LambdaQueryWrapper<Picture> getLambdaQueryWrapper(PictureQueryRequest pictureQueryRequest);
+
+	/**
+	 * 校验并填充审核参数
+	 *
+	 * @param picture   图片对象
+	 * @param loginUser 登录用户
+	 */
+	void checkAndFillReviewParams(Picture picture, User loginUser);
+
+	/**
+	 * 校验图片操作权限
+	 *
+	 * @param picture   图片对象
+	 * @param loginUser 登录用户
+	 */
+	void checkPictureChangeAuth(Picture picture, User loginUser);
+
+	/**
+	 * 填充图片名称规则
+	 *
+	 * @param pictureList 图片列表
+	 * @param nameRule    名称规则
+	 */
+	void fillPictureNameRuleBatch(List<Picture> pictureList, String nameRule);
+
+	// endregion 其他方法
 
 	// region 增删改相关（包含上传图片）
 
@@ -30,7 +71,7 @@ public interface PictureApplicationService {
 	 * @param pictureUploadRequest 图片上传请求
 	 * @return PictureVO
 	 */
-	PictureVO uploadPicture(Object pictureInputSource, PictureUploadRequest pictureUploadRequest);
+	PictureDetailVO uploadPicture(Object pictureInputSource, PictureUploadRequest pictureUploadRequest);
 
 	/**
 	 * 删除图片
@@ -90,23 +131,31 @@ public interface PictureApplicationService {
 	 * @param pictureId 图片 ID
 	 * @return 图片详情
 	 */
-	PictureVO getPictureDetailById(Long pictureId);
+	PictureDetailVO getPictureDetailById(Long pictureId);
 
 	/**
-	 * 获取首页图片分页列表（简单字段）
+	 * 获取首页图片列表
 	 *
 	 * @param pictureQueryRequest 图片查询请求
-	 * @return 图片分页列表
+	 * @return 首页图片列表
 	 */
-	PageVO<PictureSimpleVO> getPicturePageListAsSimple(PictureQueryRequest pictureQueryRequest);
+	PageVO<PictureHomeVO> getPicturePageListAsHome(PictureQueryRequest pictureQueryRequest);
 
 	/**
-	 * 获取图片分页列表（管理员）
+	 * 获取图片管理分页列表
 	 *
 	 * @param pictureQueryRequest 图片查询请求
-	 * @return 图片分页列表
+	 * @return 图片管理分页列表
 	 */
-	PageVO<Picture> getPicturePageListAsAdmin(PictureQueryRequest pictureQueryRequest);
+	PageVO<PictureVO> getPicturePageListAsManage(PictureQueryRequest pictureQueryRequest);
+
+	/**
+	 * 获取个人空间图片分页列表
+	 *
+	 * @param pictureQueryRequest 图片查询请求
+	 * @return 个人空间图片分页列表
+	 */
+	PageVO<PictureVO> getPicturePageListAsPersonSpace(PictureQueryRequest pictureQueryRequest);
 
 	// /**
 	//  * 根据颜色搜索图片
@@ -116,52 +165,48 @@ public interface PictureApplicationService {
 	//  */
 	// List<PictureVO> searchPictureByColor(PictureColorSearchRequest pictureColorSearchRequest);
 
+	/**
+	 * 爬取图片
+	 *
+	 * @param pictureGrabRequest 图片抓取请求
+	 * @return 爬取的图片列表
+	 */
+	List<GrabPictureResult> grabPicture(PictureGrabRequest pictureGrabRequest);
+
 	// endregion 查询相关
 
-	// region 其他方法
+	/**
+	 * 图片下载
+	 *
+	 * @param pictureId 图片 ID
+	 * @return 原图地址
+	 */
+	String pictureDownload(Long pictureId);
 
 	/**
-	 * 获取查询条件对象（Lambda）
+	 * 图片分享
 	 *
-	 * @param pictureQueryRequest 图片查询请求
-	 * @return 查询条件对象（Lambda）
+	 * @param pictureId 图片 ID
+	 * @return true
 	 */
-	LambdaQueryWrapper<Picture> getLambdaQueryWrapper(PictureQueryRequest pictureQueryRequest);
+	Boolean pictureShare(Long pictureId);
 
 	/**
-	 * 校验并填充审核参数
+	 * 图片查看
 	 *
-	 * @param picture   图片对象
-	 * @param loginUser 登录用户
+	 * @param pictureId 图片 ID
 	 */
-	void checkAndFillReviewParams(Picture picture, User loginUser);
+	@Async
+	void pictureView(Long pictureId);
 
 	/**
-	 * 校验图片操作权限
+	 * 图片点赞或收藏
 	 *
-	 * @param picture   图片对象
-	 * @param loginUser 登录用户
+	 * @param pictureInteractionRequest 图片互动请求
+	 * @return true
 	 */
-	void checkPictureChangeAuth(Picture picture, User loginUser);
+	Boolean pictureLikeOrCollect(PictureInteractionRequest pictureInteractionRequest);
 
-	/**
-	 * 填充图片名称规则
-	 *
-	 * @param pictureList 图片列表
-	 * @param nameRule    名称规则
-	 */
-	void fillPictureNameRuleBatch(List<Picture> pictureList, String nameRule);
-
-	// endregion 其他方法
-
-	// /**
-	//  * 批量抓取和创建图片
-	//  *
-	//  * @param pictureGrabUploadRequest 图片批量上传请求对象
-	//  * @param loginUser                登录用户
-	//  * @return 成功创建的图片数
-	//  */
-	// Integer uploadPictureByBatch(PictureGrabUploadRequest pictureGrabUploadRequest, User loginUser);
 	//
 	// /**
 	//  * 创建图片扩图任务

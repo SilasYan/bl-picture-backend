@@ -1,7 +1,7 @@
 package com.baolong.pictures.application.service.impl;
 
 import com.baolong.pictures.application.service.MainApplicationService;
-import com.baolong.pictures.infrastructure.common.constant.CacheKeyConstant;
+import com.baolong.pictures.infrastructure.constant.CacheKeyConstant;
 import com.baolong.pictures.infrastructure.manager.redis.RedisCache;
 import com.baolong.pictures.interfaces.vo.CaptchaVO;
 import com.wf.captcha.SpecCaptcha;

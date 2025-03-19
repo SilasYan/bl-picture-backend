@@ -5,13 +5,13 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 删除请求包装类
+ * 删除请求
  */
 @Data
 public class DeleteRequest implements Serializable {
 
 	/**
-	 * id
+	 * ID
 	 */
 	private Long id;
 

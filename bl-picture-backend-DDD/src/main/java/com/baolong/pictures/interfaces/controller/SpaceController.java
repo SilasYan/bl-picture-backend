@@ -2,9 +2,8 @@ package com.baolong.pictures.interfaces.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baolong.pictures.application.service.SpaceApplicationService;
-import com.baolong.pictures.domain.space.entity.Space;
+import com.baolong.pictures.application.shared.auth.annotation.AuthCheck;
 import com.baolong.pictures.domain.user.constant.UserConstant;
-import com.baolong.pictures.infrastructure.annotation.AuthCheck;
 import com.baolong.pictures.infrastructure.common.BaseResponse;
 import com.baolong.pictures.infrastructure.common.DeleteRequest;
 import com.baolong.pictures.infrastructure.common.ResultUtils;
@@ -16,6 +15,7 @@ import com.baolong.pictures.interfaces.dto.space.SpaceAddRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceEditRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceQueryRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceUpdateRequest;
+import com.baolong.pictures.interfaces.vo.space.SpaceDetailVO;
 import com.baolong.pictures.interfaces.vo.space.SpaceLevelVO;
 import com.baolong.pictures.interfaces.vo.space.SpaceVO;
 import lombok.RequiredArgsConstructor;
@@ -96,20 +96,18 @@ public class SpaceController {
 	// region 查询相关
 
 	/**
-	 * 根据空间 ID 获取空间信息
+	 * 获取登录用户的空间详情
 	 */
-	@GetMapping("/info")
-	@AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-	public BaseResponse<Space> getSpaceInfoById(Long id) {
-		ThrowUtils.throwIf(ObjectUtil.isEmpty(id), ErrorCode.PARAMS_ERROR);
-		return ResultUtils.success(spaceApplicationService.getSpaceInfoById(id));
+	@GetMapping("/loginUser/detail")
+	public BaseResponse<SpaceDetailVO> getSpaceDetailByLoginUser() {
+		return ResultUtils.success(spaceApplicationService.getSpaceDetailByLoginUser());
 	}
 
 	/**
 	 * 根据空间 ID 获取空间详情
 	 */
 	@GetMapping("/detail")
-	public BaseResponse<SpaceVO> getSpaceDetailById(Long id) {
+	public BaseResponse<SpaceDetailVO> getSpaceDetailById(Long id) {
 		ThrowUtils.throwIf(ObjectUtil.isEmpty(id), ErrorCode.PARAMS_ERROR);
 		return ResultUtils.success(spaceApplicationService.getSpaceVOById(id));
 	}
@@ -118,17 +116,17 @@ public class SpaceController {
 	 * 获取用户空间列表
 	 */
 	@GetMapping("/list")
-	public BaseResponse<List<SpaceVO>> getSpaceListAsUser(SpaceQueryRequest spaceQueryRequest) {
+	public BaseResponse<List<SpaceDetailVO>> getSpaceListAsUser(SpaceQueryRequest spaceQueryRequest) {
 		return ResultUtils.success(spaceApplicationService.getSpaceListAsUser(spaceQueryRequest));
 	}
 
 	/**
-	 * 获取空间分页列表（管理员）
+	 * 获取空间管理分页列表
 	 */
-	@GetMapping("/admin/list")
+	@PostMapping("/manage/page")
 	@AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-	public BaseResponse<PageVO<Space>> getSpacePageListAsAdmin(SpaceQueryRequest spaceQueryRequest) {
-		return ResultUtils.success(spaceApplicationService.getSpacePageListAsAdmin(spaceQueryRequest));
+	public BaseResponse<PageVO<SpaceVO>> getSpacePageListAsManage(@RequestBody SpaceQueryRequest spaceQueryRequest) {
+		return ResultUtils.success(spaceApplicationService.getSpacePageListAsManage(spaceQueryRequest));
 	}
 
 	/**

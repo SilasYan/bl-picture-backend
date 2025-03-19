@@ -1,12 +1,24 @@
 package com.baolong.pictures.application.service.impl;
 
+import cn.dev33.satoken.stp.SaTokenInfo;
+import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baolong.pictures.application.service.UserApplicationService;
+import com.baolong.pictures.domain.menu.entity.Menu;
+import com.baolong.pictures.domain.menu.enums.MenuPositionEnum;
+import com.baolong.pictures.domain.menu.service.MenuDomainService;
+import com.baolong.pictures.domain.menu.entity.RoleMenu;
+import com.baolong.pictures.domain.menu.service.RoleMenuDomainService;
 import com.baolong.pictures.domain.user.entity.User;
 import com.baolong.pictures.domain.user.service.UserDomainService;
 import com.baolong.pictures.infrastructure.common.DeleteRequest;
 import com.baolong.pictures.infrastructure.common.page.PageVO;
+import com.baolong.pictures.infrastructure.exception.BusinessException;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
 import com.baolong.pictures.infrastructure.exception.ThrowUtils;
+import com.baolong.pictures.infrastructure.manager.redis.RedisCache;
 import com.baolong.pictures.interfaces.assembler.UserAssembler;
 import com.baolong.pictures.interfaces.dto.user.UserAddRequest;
 import com.baolong.pictures.interfaces.dto.user.UserEditRequest;
@@ -15,15 +27,19 @@ import com.baolong.pictures.interfaces.dto.user.UserQueryRequest;
 import com.baolong.pictures.interfaces.dto.user.UserRegisterRequest;
 import com.baolong.pictures.interfaces.dto.user.UserUpdateRequest;
 import com.baolong.pictures.interfaces.vo.user.LoginUserVO;
+import com.baolong.pictures.interfaces.vo.user.UserDetailVO;
 import com.baolong.pictures.interfaces.vo.user.UserVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 用户应用服务实现类
@@ -33,6 +49,39 @@ import java.util.Set;
 public class UserApplicationServiceImpl implements UserApplicationService {
 
 	private final UserDomainService userDomainService;
+	private final RoleMenuDomainService roleMenuDomainService;
+	private final MenuDomainService menuDomainService;
+
+	@Resource
+	private RedisCache redisCache;
+
+	// region 其他方法
+
+	/**
+	 * 获取查询条件对象
+	 *
+	 * @param userQueryRequest 用户查询请求
+	 * @return 查询条件对象
+	 */
+	@Override
+	public QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest) {
+		ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
+		return userDomainService.getQueryWrapper(userQueryRequest);
+	}
+
+	/**
+	 * 获取查询条件对象（Lambda）
+	 *
+	 * @param userQueryRequest 用户查询请求
+	 * @return 查询条件对象（Lambda）
+	 */
+	@Override
+	public LambdaQueryWrapper<User> getLambdaQueryWrapper(UserQueryRequest userQueryRequest) {
+		ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
+		return userDomainService.getLambdaQueryWrapper(userQueryRequest);
+	}
+
+	// endregion 其他方法
 
 	// region 登录注册
 
@@ -77,7 +126,31 @@ public class UserApplicationServiceImpl implements UserApplicationService {
 		String captchaCode = userLoginRequest.getCaptchaCode();
 		User.validUserLogin(userAccount, userPassword, captchaKey, captchaCode);
 		User user = userDomainService.userLogin(userAccount, userPassword, captchaKey, captchaCode);
-		return UserAssembler.toLoginUserVO(user);
+		LoginUserVO loginUserVO = UserAssembler.toLoginUserVO(user);
+		// 查询当前用户的菜单
+		List<Long> menuIds = roleMenuDomainService.getBaseMapper().selectObjs(new LambdaQueryWrapper<RoleMenu>()
+				.select(RoleMenu::getMenuId)
+				.eq(RoleMenu::getRoleKey, loginUserVO.getUserRole())
+		);
+		if (CollUtil.isNotEmpty(menuIds)) {
+			List<Menu> menus = menuDomainService.listByIds(menuIds);
+			List<String> topMenus = menus.stream()
+					.filter(menu -> menu.getMenuPosition().equals(MenuPositionEnum.TOP.getKey()))
+					.map(Menu::getMenuPath)
+					.collect(Collectors.toList());
+			List<String> leftMenus = menus.stream()
+					.filter(menu -> menu.getMenuPosition().equals(MenuPositionEnum.LEFT.getKey()))
+					.map(Menu::getMenuPath)
+					.collect(Collectors.toList());
+			List<String> otherMenus = menus.stream()
+					.filter(menu -> menu.getMenuPosition().equals(MenuPositionEnum.OTHER.getKey()))
+					.map(Menu::getMenuPath)
+					.collect(Collectors.toList());
+			loginUserVO.setTopMenus(topMenus);
+			loginUserVO.setLeftMenus(leftMenus);
+			loginUserVO.setOtherMenus(otherMenus);
+		}
+		return loginUserVO;
 	}
 
 	/**
@@ -153,6 +226,56 @@ public class UserApplicationServiceImpl implements UserApplicationService {
 		return userDomainService.editUser(user);
 	}
 
+	/**
+	 * 上传头像
+	 *
+	 * @param avatarFile 头像文件
+	 * @return 头像地址
+	 */
+	@Override
+	public String uploadAvatar(MultipartFile avatarFile) {
+		User loginUser = this.getLoginUser();
+		Long userId = loginUser.getId();
+		String avatarUrl = userDomainService.uploadAvatar(avatarFile, userId);
+		if (StrUtil.isEmpty(avatarUrl)) {
+			throw new BusinessException(ErrorCode.OPERATION_ERROR, "头像上传失败");
+		}
+		// 更新用户信息
+		User user = new User();
+		user.setId(userId);
+		user.setUserAvatar(avatarUrl);
+		Boolean flag = userDomainService.editUser(user);
+		if (!flag) {
+			throw new BusinessException(ErrorCode.OPERATION_ERROR, "头像更新失败");
+		}
+		return avatarUrl;
+	}
+
+	/**
+	 * 重置用户密码
+	 *
+	 * @param userUpdateRequest 用户更新请求
+	 * @return 重置后的密码
+	 */
+	@Override
+	public String resetPassword(UserUpdateRequest userUpdateRequest) {
+		return userDomainService.resetPassword(userUpdateRequest.getId());
+	}
+
+	/**
+	 * 禁用用户
+	 *
+	 * @param userUpdateRequest 用户更新请求
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean disabledUser(UserUpdateRequest userUpdateRequest) {
+		// 查询是否存在
+		Boolean existed = userDomainService.existUserById(userUpdateRequest.getId());
+		ThrowUtils.throwIf(!existed, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+		return userDomainService.disabledUser(userUpdateRequest.getId(), userUpdateRequest.getIsDisabled());
+	}
+
 	// /**
 	//  * 用户兑换会员
 	//  *
@@ -189,7 +312,13 @@ public class UserApplicationServiceImpl implements UserApplicationService {
 	@Override
 	public LoginUserVO getLoginUserDetail() {
 		User user = userDomainService.getLoginUser();
-		return UserAssembler.toLoginUserVO(user);
+		// 获取登录信息
+		LoginUserVO loginUserVO = UserAssembler.toLoginUserVO(user);
+		SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+		System.out.println(JSONUtil.parse(tokenInfo));
+		System.out.println(tokenInfo.getTokenValue());
+		loginUserVO.setToken(tokenInfo.getTokenValue());
+		return loginUserVO;
 	}
 
 	/**
@@ -210,24 +339,32 @@ public class UserApplicationServiceImpl implements UserApplicationService {
 	 * @return 用户详情
 	 */
 	@Override
-	public UserVO getUserDetailById(Long userId) {
+	public UserDetailVO getUserDetailById(Long userId) {
 		User user = userDomainService.getUserById(userId);
-		return UserAssembler.toUserVO(user);
+		return UserAssembler.toUserDetailVO(user);
 	}
 
 	/**
-	 * 获取分页用户列表（管理员）
+	 * 获取用户管理分页列表
 	 *
 	 * @param userQueryRequest 用户查询请求
-	 * @return 用户分页列表
+	 * @return 用户管理分页列表
 	 */
 	@Override
-	public PageVO<User> getUserPageListAsAdmin(UserQueryRequest userQueryRequest) {
-		Page<User> userPage = userDomainService.getUserPageListAsAdmin(
+	public PageVO<UserVO> getUserPageListAsManage(UserQueryRequest userQueryRequest) {
+		Page<User> userPage = userDomainService.getUserPageListAsManage(
 				userQueryRequest.getPage(User.class)
 				, this.getLambdaQueryWrapper(userQueryRequest)
 		);
-		return PageVO.from(userPage);
+		List<UserVO> userVOS = userPage.getRecords().stream()
+				.map(UserAssembler::toUserVO)
+				.collect(Collectors.toList());
+		return new PageVO<>(userPage.getCurrent()
+				, userPage.getSize()
+				, userPage.getTotal()
+				, userPage.getPages()
+				, userVOS
+		);
 	}
 
 	/**
@@ -242,34 +379,6 @@ public class UserApplicationServiceImpl implements UserApplicationService {
 	}
 
 	// endregion 查询相关
-
-	// region 其他方法
-
-	/**
-	 * 获取查询条件对象
-	 *
-	 * @param userQueryRequest 用户查询请求
-	 * @return 查询条件对象
-	 */
-	@Override
-	public QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest) {
-		ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
-		return userDomainService.getQueryWrapper(userQueryRequest);
-	}
-
-	/**
-	 * 获取查询条件对象（Lambda）
-	 *
-	 * @param userQueryRequest 用户查询请求
-	 * @return 查询条件对象（Lambda）
-	 */
-	@Override
-	public LambdaQueryWrapper<User> getLambdaQueryWrapper(UserQueryRequest userQueryRequest) {
-		ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
-		return userDomainService.getLambdaQueryWrapper(userQueryRequest);
-	}
-
-	// endregion 其他方法
 
 	// // region ------- 以下代码为用户兑换会员功能 --------
 	//

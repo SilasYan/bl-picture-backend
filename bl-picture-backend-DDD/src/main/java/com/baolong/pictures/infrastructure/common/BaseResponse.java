@@ -6,7 +6,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 通用相应类
+ * 通用响应类
  *
  * @param <T> T
  */

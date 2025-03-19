@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
 import com.baolong.pictures.infrastructure.exception.ThrowUtils;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -118,10 +119,10 @@ public class Picture implements Serializable {
 	/**
 	 * 分类 ID
 	 */
-	private Long category;
+	private Long categoryId;
 
 	/**
-	 * 标签（逗号分隔的标签 ID 列表）
+	 * 标签（逗号分隔的标签列表）
 	 */
 	private String tags;
 
@@ -161,6 +162,36 @@ public class Picture implements Serializable {
 	private Integer resourceStatus;
 
 	/**
+	 * 查看数量
+	 */
+	private Integer viewQuantity;
+
+	/**
+	 * 点赞数量
+	 */
+	private Integer likeQuantity;
+
+	/**
+	 * 收藏数量
+	 */
+	private Integer collectQuantity;
+
+	/**
+	 * 下载数量
+	 */
+	private Integer downloadQuantity;
+
+	/**
+	 * 分享数量
+	 */
+	private Integer shareQuantity;
+
+	/**
+	 * 是否分享（0-分享, 1-不分享）
+	 */
+	private Integer isShare;
+
+	/**
 	 * 是否删除
 	 */
 	private Integer isDelete;
@@ -168,6 +199,7 @@ public class Picture implements Serializable {
 	/**
 	 * 编辑时间
 	 */
+	@TableField(value = "edit_time", fill = FieldFill.UPDATE)
 	private Date editTime;
 
 	/**

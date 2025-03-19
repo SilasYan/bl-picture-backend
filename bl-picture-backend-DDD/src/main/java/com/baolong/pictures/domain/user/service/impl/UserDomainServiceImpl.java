@@ -1,34 +1,40 @@
 package com.baolong.pictures.domain.user.service.impl;
 
+import cn.dev33.satoken.stp.SaTokenInfo;
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.RegexPool;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baolong.pictures.application.shared.auth.StpKit;
+import cn.hutool.json.JSONUtil;
 import com.baolong.pictures.domain.user.constant.UserConstant;
 import com.baolong.pictures.domain.user.entity.User;
+import com.baolong.pictures.domain.user.enums.UserDisabledEnum;
 import com.baolong.pictures.domain.user.service.UserDomainService;
-import com.baolong.pictures.infrastructure.common.constant.CacheKeyConstant;
+import com.baolong.pictures.infrastructure.constant.CacheKeyConstant;
 import com.baolong.pictures.infrastructure.common.page.PageRequest;
 import com.baolong.pictures.infrastructure.exception.BusinessException;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
 import com.baolong.pictures.infrastructure.exception.ThrowUtils;
 import com.baolong.pictures.infrastructure.manager.message.EmailManager;
 import com.baolong.pictures.infrastructure.manager.redis.RedisCache;
+import com.baolong.pictures.infrastructure.manager.upload.picture.UploadPictureFile;
+import com.baolong.pictures.infrastructure.manager.upload.picture.model.UploadPictureResult;
 import com.baolong.pictures.infrastructure.repository.UserRepository;
 import com.baolong.pictures.infrastructure.utils.SFLambdaUtil;
-import com.baolong.pictures.infrastructure.utils.ServletUtils;
 import com.baolong.pictures.interfaces.dto.user.UserQueryRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,267 +43,17 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 用户领域服务实现类
+ * 用户表 (user) - 领域服务实现
  */
 @Slf4j
 @Service
-public class UserDomainServiceImpl implements UserDomainService {
-	@Resource
-	private UserRepository userRepository;
+public class UserDomainServiceImpl extends ServiceImpl<UserRepository, User> implements UserDomainService {
 	@Resource
 	private EmailManager emailManager;
 	@Resource
 	private RedisCache redisCache;
-
-	// region 登录注册
-
-	/**
-	 * 发送邮箱验证码
-	 *
-	 * @param userEmail 用户邮箱
-	 * @return 验证码 key
-	 */
-	@Override
-	public String sendEmailCode(String userEmail) {
-		Long count = userRepository.getBaseMapper().selectCount(new QueryWrapper<User>().eq("user_email", userEmail));
-		ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号已存在, 请直接登录!");
-		// 发送验证码
-		String code = RandomUtil.randomNumbers(4);
-		Map<String, Object> contentMap = new HashMap<>();
-		contentMap.put("code", code);
-		emailManager.sendEmail(userEmail, "注册验证码 - 暴龙图库", contentMap);
-		// 生成一个唯一 ID, 后面注册前端需要带过来
-		String key = UUID.randomUUID().toString();
-		// 存入 Redis, 5 分钟过期
-		redisCache.set(String.format(CacheKeyConstant.EMAIL_CODE_KEY, key, userEmail), code, 5, TimeUnit.MINUTES);
-		return key;
-	}
-
-	/**
-	 * 用户注册
-	 *
-	 * @param userEmail 用户邮箱
-	 * @param codeKey   验证码 key
-	 * @param codeValue 验证码 value
-	 * @return 用户ID
-	 */
-	@Override
-	public Long userRegister(String userEmail, String codeKey, String codeValue) {
-		String KEY = String.format(CacheKeyConstant.EMAIL_CODE_KEY, codeKey, userEmail);
-		// 获取 Redis 中的验证码
-		String code = redisCache.get(KEY);
-		if (StrUtil.isEmpty(code) || !code.equals(codeValue)) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
-		}
-		Long count = userRepository.getBaseMapper().selectCount(new QueryWrapper<User>().eq("user_email", userEmail));
-		ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号已存在, 请直接登录!");
-		// 构建参数
-		User user = new User();
-		// 默认值填充
-		user.fillDefaultValue();
-		user.setUserEmail(userEmail);
-		boolean result = userRepository.save(user);
-		if (!result) {
-			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
-		}
-		// 删除验证码
-		redisCache.delete(KEY);
-		return user.getId();
-	}
-
-	/**
-	 * 用户登录
-	 *
-	 * @param userAccount  用户账户
-	 * @param userPassword 用户密码
-	 * @param captchaKey   图形验证码 key
-	 * @param captchaCode  图形验证码 验证码
-	 * @return 用户信息
-	 */
-	@Override
-	public User userLogin(String userAccount, String userPassword, String captchaKey, String captchaCode) {
-		String KEY = String.format(CacheKeyConstant.CAPTCHA_CODE_KEY, captchaKey);
-		// 获取 Redis 中的验证码
-		String code = redisCache.get(KEY);
-		if (StrUtil.isEmpty(code) || !code.equals(captchaCode)) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
-		}
-		// 构建账号/邮箱登录的请求条件
-		LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-		if (ReUtil.isMatch(RegexPool.EMAIL, userAccount)) {
-			// 邮箱登录
-			queryWrapper.eq(User::getUserEmail, userAccount);
-		} else {
-			// 账号登录
-			queryWrapper.eq(User::getUserAccount, userAccount);
-		}
-		User user = userRepository.getOne(queryWrapper);
-		if (user == null) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
-		}
-		// 校验密码
-		String encryptPassword = user.getEncryptPassword(userPassword);
-		if (!user.getUserPassword().equals(encryptPassword)) {
-			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
-		}
-		// 记录用户的登录态到 Session, 已经开启缓存到 Redis 中的配置
-		ServletUtils.getRequest().getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
-		// 记录用户登录态到 Sa-token，注意保证该用户信息与 SpringSession 中的信息过期时间一致
-		StpKit.SPACE.login(user.getId());
-		StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
-		// 删除验证码
-		redisCache.delete(KEY);
-		return user;
-	}
-
-	/**
-	 * 用户退出（退出登录）
-	 *
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean userLogout() {
-		// 先判断是否已登录
-		HttpServletRequest request = ServletUtils.getRequest();
-		Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-		if (userObj == null) {
-			throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
-		}
-		// 移除登录态
-		request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
-		return true;
-	}
-
-	// endregion 登录注册
-
-	// region 增删改相关
-
-	/**
-	 * 新增用户
-	 *
-	 * @param user 用户
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean addUser(User user) {
-		user.fillDefaultValue();
-		return userRepository.save(user);
-	}
-
-	/**
-	 * 删除用户
-	 *
-	 * @param userId 用户ID
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean deleteUser(Long userId) {
-		return userRepository.removeById(userId);
-	}
-
-	/**
-	 * 更新用户
-	 *
-	 * @param user 用户
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean updateUser(User user) {
-		return userRepository.updateById(user);
-	}
-
-	/**
-	 * 编辑用户
-	 *
-	 * @param user 用户
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean editUser(User user) {
-		return userRepository.updateById(user);
-	}
-
-	// endregion 增删改相关
-
-	// region 查询相关
-
-	/**
-	 * 获取登录用户信息
-	 *
-	 * @return 登录用户信息
-	 */
-	@Override
-	public User getLoginUser() {
-		// 先判断是否已登录
-		Object userObj = ServletUtils.getRequest().getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-		User TUser = (User) userObj;
-		if (TUser == null || TUser.getId() == null) {
-			throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
-		}
-		return TUser;
-	}
-
-	/**
-	 * 根据用户 ID 获取用户信息
-	 *
-	 * @param userId 用户ID
-	 * @return 用户
-	 */
-	@Override
-	public User getUserById(Long userId) {
-		User user = userRepository.getById(userId);
-		if (user == null) {
-			throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
-		}
-		return user;
-	}
-
-	/**
-	 * 获取分页用户列表（管理员, 条件查询）
-	 *
-	 * @param page               分页对象
-	 * @param lambdaQueryWrapper 查询条件
-	 * @return 用户分页列表
-	 */
-	@Override
-	public Page<User> getUserPageListAsAdmin(Page<User> page, LambdaQueryWrapper<User> lambdaQueryWrapper) {
-		return userRepository.page(page, lambdaQueryWrapper);
-	}
-
-	/**
-	 * 根据用户 ID 判断用户是否存在
-	 *
-	 * @param userId 用户 ID
-	 * @return 是否存在
-	 */
-	@Override
-	public Boolean existUserById(Long userId) {
-		return userRepository.getBaseMapper().exists(new LambdaQueryWrapper<User>().eq(User::getId, userId));
-	}
-
-	/**
-	 * 根据用户邮箱判断用户是否存在
-	 *
-	 * @param userEmail 用户邮箱
-	 * @return 是否存在
-	 */
-	@Override
-	public Boolean existUserByEmail(String userEmail) {
-		return userRepository.getBaseMapper().exists(new LambdaQueryWrapper<User>().eq(User::getUserEmail, userEmail));
-	}
-
-	/**
-	 * 根据用户 ID 集合获取用户列表
-	 *
-	 * @param userIds 用户 ID 集合
-	 * @return 用户列表
-	 */
-	@Override
-	public List<User> getUserListByIds(Set<Long> userIds) {
-		return userRepository.listByIds(userIds);
-	}
-
-	// endregion 查询相关
+	@Resource
+	private UploadPictureFile uploadPictureFile;
 
 	// region 其他方法
 
@@ -393,6 +149,309 @@ public class UserDomainServiceImpl implements UserDomainService {
 	}
 
 	// endregion 其他方法
+
+	// region 登录注册
+
+	/**
+	 * 发送邮箱验证码
+	 *
+	 * @param userEmail 用户邮箱
+	 * @return 验证码 key
+	 */
+	@Override
+	public String sendEmailCode(String userEmail) {
+		Long count = this.getBaseMapper().selectCount(new QueryWrapper<User>().eq("user_email", userEmail));
+		ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号已存在, 请直接登录!");
+		// 发送验证码
+		String code = RandomUtil.randomNumbers(4);
+		Map<String, Object> contentMap = new HashMap<>();
+		contentMap.put("code", code);
+		emailManager.sendEmail(userEmail, "注册验证码 - 暴龙图库", contentMap);
+		// 生成一个唯一 ID, 后面注册前端需要带过来
+		String key = UUID.randomUUID().toString();
+		// 存入 Redis, 5 分钟过期
+		redisCache.set(String.format(CacheKeyConstant.EMAIL_CODE_KEY, key, userEmail), code, 5, TimeUnit.MINUTES);
+		return key;
+	}
+
+	/**
+	 * 用户注册
+	 *
+	 * @param userEmail 用户邮箱
+	 * @param codeKey   验证码 key
+	 * @param codeValue 验证码 value
+	 * @return 用户ID
+	 */
+	@Override
+	public Long userRegister(String userEmail, String codeKey, String codeValue) {
+		String KEY = String.format(CacheKeyConstant.EMAIL_CODE_KEY, codeKey, userEmail);
+		// 获取 Redis 中的验证码
+		String code = redisCache.get(KEY);
+		// 删除验证码
+		redisCache.delete(KEY);
+		if (StrUtil.isEmpty(code) || !code.equals(codeValue)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+		}
+		Long count = this.getBaseMapper().selectCount(new QueryWrapper<User>().eq("user_email", userEmail));
+		ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号已存在, 请直接登录!");
+		// 构建参数
+		User user = new User();
+		// 默认值填充
+		user.fillDefaultValue();
+		user.setUserEmail(userEmail);
+		boolean result = this.save(user);
+		if (!result) {
+			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
+		}
+		return user.getId();
+	}
+
+	/**
+	 * 用户登录
+	 *
+	 * @param userAccount  用户账户
+	 * @param userPassword 用户密码
+	 * @param captchaKey   图形验证码 key
+	 * @param captchaCode  图形验证码 验证码
+	 * @return 用户信息
+	 */
+	@Override
+	public User userLogin(String userAccount, String userPassword, String captchaKey, String captchaCode) {
+		String KEY = String.format(CacheKeyConstant.CAPTCHA_CODE_KEY, captchaKey);
+		// 获取 Redis 中的验证码
+		String code = redisCache.get(KEY);
+		// 删除验证码
+		redisCache.delete(KEY);
+		if (StrUtil.isEmpty(code) || !code.equals(captchaCode)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+		}
+		// 构建账号/邮箱登录的请求条件
+		LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+		if (ReUtil.isMatch(RegexPool.EMAIL, userAccount)) {
+			// 邮箱登录
+			queryWrapper.eq(User::getUserEmail, userAccount);
+		} else {
+			// 账号登录
+			queryWrapper.eq(User::getUserAccount, userAccount);
+		}
+		User user = this.getOne(queryWrapper);
+		if (user == null) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
+		}
+		// 判断是否被禁用
+		if (UserDisabledEnum.isDisabled(user.getIsDisabled())) {
+			throw new BusinessException(ErrorCode.FORBIDDEN_ERROR, "用户已被禁用");
+		}
+		// 校验密码
+		String encryptPassword = User.getEncryptPassword(userPassword);
+		if (!user.getUserPassword().equals(encryptPassword)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
+		}
+		// 用户登录态到 Sa-token
+		StpUtil.login(user.getId());
+		SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+		redisCache.set(UserConstant.USER_LOGIN_STATE + tokenInfo.getTokenValue(), JSONUtil.toJsonStr(user),
+				tokenInfo.getTokenTimeout(), TimeUnit.SECONDS);
+		return user;
+	}
+
+	/**
+	 * 用户退出（退出登录）
+	 *
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean userLogout() {
+		SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+		redisCache.delete(UserConstant.USER_LOGIN_STATE + tokenInfo.getTokenValue());
+		StpUtil.logout();
+		return StpUtil.isLogin();
+	}
+
+	// endregion 登录注册
+
+	// region 增删改相关
+
+	/**
+	 * 新增用户
+	 *
+	 * @param user 用户
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean addUser(User user) {
+		user.fillDefaultValue();
+		return this.save(user);
+	}
+
+	/**
+	 * 删除用户
+	 *
+	 * @param userId 用户ID
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean deleteUser(Long userId) {
+		return this.removeById(userId);
+	}
+
+	/**
+	 * 更新用户
+	 *
+	 * @param user 用户
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean updateUser(User user) {
+		return this.updateById(user);
+	}
+
+	/**
+	 * 编辑用户
+	 *
+	 * @param user 用户
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean editUser(User user) {
+		return this.updateById(user);
+	}
+
+	/**
+	 * 上传头像
+	 *
+	 * @param avatarFile 头像文件
+	 * @param userId     用户ID
+	 * @return 头像地址
+	 */
+	@Override
+	public String uploadAvatar(MultipartFile avatarFile, Long userId) {
+		// 路径, 例如: images/public/2025_03_08/
+		String pathPrefix = "avatar/" + userId + "/";
+		// 调用上传图片
+		UploadPictureResult uploadPictureResult = uploadPictureFile.uploadFile(avatarFile, pathPrefix, false);
+		return uploadPictureResult.getOriginUrl();
+	}
+
+	/**
+	 * 重置用户密码
+	 *
+	 * @param userId 用户密码
+	 * @return 重置后的密码
+	 */
+	@Override
+	public String resetPassword(Long userId) {
+		String tempPassword = RandomUtil.randomString(8);
+		User user = new User();
+		user.setId(userId);
+		user.setUserPassword(User.getEncryptPassword(tempPassword));
+		boolean flag = this.updateById(user);
+		if (!flag) {
+			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "重置密码失败");
+		}
+		return tempPassword;
+	}
+
+	/**
+	 * 禁用用户
+	 *
+	 * @param userId     用户 ID
+	 * @param isDisabled 是否禁用
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean disabledUser(Long userId, Integer isDisabled) {
+		return this.update(new LambdaUpdateWrapper<User>()
+				.set(User::getIsDisabled, isDisabled)
+				.eq(User::getId, userId)
+		);
+	}
+
+	// endregion 增删改相关
+
+	// region 查询相关
+
+	/**
+	 * 获取登录用户信息
+	 *
+	 * @return 登录用户信息
+	 */
+	@Override
+	public User getLoginUser() {
+		System.out.println("是否登录" + StpUtil.isLogin());
+		if (StpUtil.isLogin()) {
+			return this.getById(StpUtil.getLoginIdAsLong());
+		}
+		// // 先判断是否已登录
+		// Object userObj = ServletUtils.getRequest().getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+		// User user = (User) userObj;
+		// if (user == null || user.getId() == null) {
+		// 	throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+		// }
+		return null;
+	}
+
+	/**
+	 * 根据用户 ID 获取用户信息
+	 *
+	 * @param userId 用户ID
+	 * @return 用户
+	 */
+	@Override
+	public User getUserById(Long userId) {
+		User user = this.getById(userId);
+		if (user == null) {
+			throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+		}
+		return user;
+	}
+
+	/**
+	 * 获取用户管理分页列表
+	 *
+	 * @param page               分页对象
+	 * @param lambdaQueryWrapper 查询条件
+	 * @return 用户管理分页列表
+	 */
+	@Override
+	public Page<User> getUserPageListAsManage(Page<User> page, LambdaQueryWrapper<User> lambdaQueryWrapper) {
+		return this.page(page, lambdaQueryWrapper);
+	}
+
+	/**
+	 * 根据用户 ID 判断用户是否存在
+	 *
+	 * @param userId 用户 ID
+	 * @return 是否存在
+	 */
+	@Override
+	public Boolean existUserById(Long userId) {
+		return this.getBaseMapper().exists(new LambdaQueryWrapper<User>().eq(User::getId, userId));
+	}
+
+	/**
+	 * 根据用户邮箱判断用户是否存在
+	 *
+	 * @param userEmail 用户邮箱
+	 * @return 是否存在
+	 */
+	@Override
+	public Boolean existUserByEmail(String userEmail) {
+		return this.getBaseMapper().exists(new LambdaQueryWrapper<User>().eq(User::getUserEmail, userEmail));
+	}
+
+	/**
+	 * 根据用户 ID 集合获取用户列表
+	 *
+	 * @param userIds 用户 ID 集合
+	 * @return 用户列表
+	 */
+	@Override
+	public List<User> getUserListByIds(Set<Long> userIds) {
+		return this.listByIds(userIds);
+	}
+
+	// endregion 查询相关
 
 	// // region ------- 以下代码为用户兑换会员功能 --------
 	//

@@ -1,5 +1,6 @@
 package com.baolong.pictures.application.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baolong.pictures.application.service.SpaceApplicationService;
 import com.baolong.pictures.application.service.UserApplicationService;
@@ -22,6 +23,7 @@ import com.baolong.pictures.interfaces.dto.space.SpaceAddRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceEditRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceQueryRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceUpdateRequest;
+import com.baolong.pictures.interfaces.vo.space.SpaceDetailVO;
 import com.baolong.pictures.interfaces.vo.space.SpaceLevelVO;
 import com.baolong.pictures.interfaces.vo.space.SpaceVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -36,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -52,6 +55,107 @@ public class SpaceApplicationServiceImpl implements SpaceApplicationService {
 
 	@Resource
 	private TransactionTemplate transactionTemplate;
+
+	// region 其他相关
+
+	/**
+	 * 校验空间上传权限
+	 *
+	 * @param spaceId   空间 ID
+	 * @param loginUser 用户对象
+	 */
+	@Override
+	public void checkSpaceUploadAuth(Long spaceId, User loginUser) {
+		if (loginUser.isAdmin()) return;
+		if (ObjectUtil.isNotNull(spaceId) && !spaceId.equals(0L)) {
+			// 空间图库: 私有空间/团队空间
+			Space space = this.getSpaceInfoById(spaceId);
+			ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+			// 校验空间大小和总数
+			space.validSpaceSizeAndCount();
+			// 判断是 私有空间 还是 团队空间
+			if (SpaceTypeEnum.PRIVATE.getKey() == space.getSpaceType()) {
+				// 私有空间, 必须本人才能上传
+				ThrowUtils.throwIf(!space.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "没有空间访问权限");
+			} else {
+				// 团队空间, 必须空间创建人/编辑者才能上传
+				SpaceUser spaceUser = spaceUserDomainService.getSpaceUserBySpaceIdAndUserId(spaceId, loginUser.getId());
+				ThrowUtils.throwIf(spaceUser == null, ErrorCode.NO_AUTH_ERROR, "没有空间访问权限");
+				String spaceRole = spaceUser.getSpaceRole();
+				if (!SpaceRoleEnum.CREATOR.getKey().equals(spaceRole) && !SpaceRoleEnum.EDITOR.getKey().equals(spaceRole)) {
+					throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间访问权限");
+				}
+			}
+		}
+	}
+
+	/**
+	 * 校验空间新增权限
+	 *
+	 * @param space     空间对象
+	 * @param user      用户对象
+	 * @param loginUser 登录用户对象
+	 */
+	@Override
+	public void checkSpaceAddAuth(Space space, User user, User loginUser) {
+		// 查询当前用户是否已经有 私人空间
+		if (SpaceLevelEnum.COMMON.getKey() == space.getSpaceLevel()) {
+			Boolean existed = spaceDomainService.existSpaceByUserIdAndSpaceType(user.getId(), SpaceTypeEnum.PRIVATE.getKey());
+			ThrowUtils.throwIf(existed, ErrorCode.OPERATION_ERROR, "用户已开通个人空间");
+		}
+		// 只有管理员可以创建团队空间
+		if (SpaceTypeEnum.TEAM.getKey() == space.getSpaceType() && !loginUser.isAdmin()) {
+			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限创建团队空间");
+		}
+		// 权限校验
+		if (SpaceLevelEnum.COMMON.getKey() != space.getSpaceLevel() && !loginUser.isAdmin()) {
+			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限创建当前级别的空间");
+		}
+	}
+
+	/**
+	 * 校验空间编辑权限
+	 *
+	 * @param space     空间对象
+	 * @param loginUser 登录用户对象
+	 */
+	@Override
+	public void checkSpaceChangeAuth(Space space, User loginUser) {
+		if (Objects.equals(space.getUserId(), loginUser.getId()) || loginUser.isAdmin()) return;
+		// 只有管理员可以创建团队空间
+		if (SpaceTypeEnum.TEAM.getKey() == space.getSpaceType() && !loginUser.isAdmin()) {
+			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作");
+		}
+		// 权限校验
+		if (SpaceLevelEnum.COMMON.getKey() != space.getSpaceLevel() && !loginUser.isAdmin()) {
+			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作该级别的空间");
+		}
+	}
+
+	/**
+	 * 校验空间是否存在
+	 *
+	 * @param spaceId 空间 ID
+	 */
+	@Override
+	public void checkSpaceExisted(Long spaceId) {
+		Boolean existed = spaceDomainService.existSpaceById(spaceId);
+		ThrowUtils.throwIf(!existed, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+	}
+
+	/**
+	 * 获取查询条件对象（Lambda）
+	 *
+	 * @param spaceQueryRequest 空间查询请求
+	 * @return 查询条件对象（Lambda）
+	 */
+	@Override
+	public LambdaQueryWrapper<Space> getLambdaQueryWrapper(SpaceQueryRequest spaceQueryRequest) {
+		ThrowUtils.throwIf(spaceQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
+		return spaceDomainService.getLambdaQueryWrapper(spaceQueryRequest);
+	}
+
+	// endregion 其他相关
 
 	// region 增删改
 
@@ -191,14 +295,26 @@ public class SpaceApplicationServiceImpl implements SpaceApplicationService {
 	public Boolean updateSpaceSizeAndCount(Long spaceId, Long picSize, Long picCount) {
 		LambdaUpdateWrapper<Space> updateWrapper = new LambdaUpdateWrapper<>();
 		updateWrapper.eq(Space::getId, spaceId);
-		updateWrapper.setSql("totalSize = totalSize + (" + picSize + ")");
-		updateWrapper.setSql("totalCount = totalCount + (" + picCount + ")");
+		updateWrapper.setSql("used_size = used_size + (" + picSize + ")");
+		updateWrapper.setSql("used_count = used_count + (" + picCount + ")");
 		return spaceDomainService.updateSpaceSizeAndCount(updateWrapper);
 	}
 
 	// endregion 增删改
 
 	// region 查询相关
+
+	/**
+	 * 获取登录用户的空间详情
+	 *
+	 * @return 登录用户的空间详情
+	 */
+	@Override
+	public SpaceDetailVO getSpaceDetailByLoginUser() {
+		User loginUser = userApplicationService.getLoginUser();
+		Space space = this.getSpaceInfoByUserId(loginUser.getId());
+		return SpaceAssembler.toSpaceDetailVO(space);
+	}
 
 	/**
 	 * 根据空间 ID 获取空间信息
@@ -212,15 +328,29 @@ public class SpaceApplicationServiceImpl implements SpaceApplicationService {
 	}
 
 	/**
+	 * 根据用户 ID 获取个人空间信息
+	 *
+	 * @param userId 用户 ID
+	 * @return 空间信息
+	 */
+	@Override
+	public Space getSpaceInfoByUserId(Long userId) {
+		return spaceDomainService.getOne(new LambdaQueryWrapper<Space>()
+				.eq(Space::getSpaceType, SpaceTypeEnum.PRIVATE)
+				.eq(Space::getUserId, userId)
+		);
+	}
+
+	/**
 	 * 根据空间 ID 获取空间详情
 	 *
 	 * @param spaceId 空间 ID
 	 * @return 空间详情
 	 */
 	@Override
-	public SpaceVO getSpaceVOById(Long spaceId) {
+	public SpaceDetailVO getSpaceVOById(Long spaceId) {
 		Space space = spaceDomainService.getSpaceById(spaceId);
-		return SpaceAssembler.toSpaceVO(space);
+		return SpaceAssembler.toSpaceDetailVO(space);
 	}
 
 	/**
@@ -230,23 +360,43 @@ public class SpaceApplicationServiceImpl implements SpaceApplicationService {
 	 * @return 空间列表
 	 */
 	@Override
-	public List<SpaceVO> getSpaceListAsUser(SpaceQueryRequest spaceQueryRequest) {
+	public List<SpaceDetailVO> getSpaceListAsUser(SpaceQueryRequest spaceQueryRequest) {
 		List<Space> spaceList = spaceDomainService.getSpaceListAsUser(getLambdaQueryWrapper(spaceQueryRequest));
-		return spaceList.stream().map(SpaceAssembler::toSpaceVO).collect(Collectors.toList());
+		return spaceList.stream().map(SpaceAssembler::toSpaceDetailVO).collect(Collectors.toList());
 	}
 
 	/**
-	 * 获取空间分页列表（管理员）
+	 * 获取空间管理分页列表
 	 *
 	 * @param spaceQueryRequest 空间查询请求
-	 * @return 空间分页列表
+	 * @return 空间管理分页列表
 	 */
 	@Override
-	public PageVO<Space> getSpacePageListAsAdmin(SpaceQueryRequest spaceQueryRequest) {
-		Page<Space> spacePage = spaceDomainService.getSpacePageListAsAdmin(
+	public PageVO<SpaceVO> getSpacePageListAsManage(SpaceQueryRequest spaceQueryRequest) {
+		Page<Space> spacePage = spaceDomainService.getSpacePageListAsManage(
 				spaceQueryRequest.getPage(Space.class), this.getLambdaQueryWrapper(spaceQueryRequest)
 		);
-		return PageVO.from(spacePage);
+		List<SpaceVO> spaceVOS = spacePage.getRecords().stream()
+				.map(SpaceAssembler::toSpaceVO)
+				.collect(Collectors.toList());
+		if (CollUtil.isNotEmpty(spaceVOS)) {
+			// 查询用户信息
+			Set<Long> userIds = spaceVOS.stream().map(SpaceVO::getUserId).collect(Collectors.toSet());
+			Map<Long, List<User>> userListMap = userApplicationService.getUserListByIds(userIds)
+					.stream().collect(Collectors.groupingBy(User::getId));
+			spaceVOS.forEach(space -> {
+				Long userId = space.getUserId();
+				if (userListMap.containsKey(userId)) {
+					space.setUserInfo(userListMap.get(userId).get(0));
+				}
+			});
+		}
+		return new PageVO<>(spacePage.getCurrent()
+				, spacePage.getSize()
+				, spacePage.getTotal()
+				, spacePage.getPages()
+				, spaceVOS
+		);
 	}
 
 	/**
@@ -269,107 +419,6 @@ public class SpaceApplicationServiceImpl implements SpaceApplicationService {
 	}
 
 	// endregion 查询相关
-
-	// region 其他相关
-
-	/**
-	 * 校验空间上传权限
-	 *
-	 * @param spaceId   空间 ID
-	 * @param loginUser 用户对象
-	 */
-	@Override
-	public void checkSpaceUploadAuth(Long spaceId, User loginUser) {
-		if (loginUser.isAdmin()) return;
-		if (ObjectUtil.isNotNull(spaceId) && !spaceId.equals(0L)) {
-			// 空间图库: 私有空间/团队空间
-			Space space = this.getSpaceInfoById(spaceId);
-			ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-			// 校验空间大小和总数
-			space.validSpaceSizeAndCount();
-			// 判断是 私有空间 还是 团队空间
-			if (SpaceTypeEnum.PRIVATE.getKey() == space.getSpaceType()) {
-				// 私有空间, 必须本人才能上传
-				ThrowUtils.throwIf(!space.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "没有空间访问权限");
-			} else {
-				// 团队空间, 必须空间创建人/编辑者才能上传
-				SpaceUser spaceUser = spaceUserDomainService.getSpaceUserBySpaceIdAndUserId(spaceId, loginUser.getId());
-				ThrowUtils.throwIf(spaceUser == null, ErrorCode.NO_AUTH_ERROR, "没有空间访问权限");
-				String spaceRole = spaceUser.getSpaceRole();
-				if (!SpaceRoleEnum.CREATOR.getKey().equals(spaceRole) && !SpaceRoleEnum.EDITOR.getKey().equals(spaceRole)) {
-					throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间访问权限");
-				}
-			}
-		}
-	}
-
-	/**
-	 * 校验空间新增权限
-	 *
-	 * @param space     空间对象
-	 * @param user      用户对象
-	 * @param loginUser 登录用户对象
-	 */
-	@Override
-	public void checkSpaceAddAuth(Space space, User user, User loginUser) {
-		// 查询当前用户是否已经有 私人空间
-		if (SpaceLevelEnum.COMMON.getKey() == space.getSpaceLevel()) {
-			Boolean existed = spaceDomainService.existSpaceByUserIdAndSpaceType(user.getId(), SpaceTypeEnum.PRIVATE.getKey());
-			ThrowUtils.throwIf(existed, ErrorCode.OPERATION_ERROR, "用户已开通个人空间");
-		}
-		// 只有管理员可以创建团队空间
-		if (SpaceTypeEnum.TEAM.getKey() == space.getSpaceType() && !loginUser.isAdmin()) {
-			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限创建团队空间");
-		}
-		// 权限校验
-		if (SpaceLevelEnum.COMMON.getKey() != space.getSpaceLevel() && !loginUser.isAdmin()) {
-			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限创建当前级别的空间");
-		}
-	}
-
-	/**
-	 * 校验空间编辑权限
-	 *
-	 * @param space     空间对象
-	 * @param loginUser 登录用户对象
-	 */
-	@Override
-	public void checkSpaceChangeAuth(Space space, User loginUser) {
-		if (Objects.equals(space.getUserId(), loginUser.getId()) || loginUser.isAdmin()) return;
-		// 只有管理员可以创建团队空间
-		if (SpaceTypeEnum.TEAM.getKey() == space.getSpaceType() && !loginUser.isAdmin()) {
-			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作");
-		}
-		// 权限校验
-		if (SpaceLevelEnum.COMMON.getKey() != space.getSpaceLevel() && !loginUser.isAdmin()) {
-			throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作该级别的空间");
-		}
-	}
-
-	/**
-	 * 校验空间是否存在
-	 *
-	 * @param spaceId 空间 ID
-	 */
-	@Override
-	public void checkSpaceExisted(Long spaceId) {
-		Boolean existed = spaceDomainService.existSpaceById(spaceId);
-		ThrowUtils.throwIf(!existed, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-	}
-
-	/**
-	 * 获取查询条件对象（Lambda）
-	 *
-	 * @param spaceQueryRequest 空间查询请求
-	 * @return 查询条件对象（Lambda）
-	 */
-	@Override
-	public LambdaQueryWrapper<Space> getLambdaQueryWrapper(SpaceQueryRequest spaceQueryRequest) {
-		ThrowUtils.throwIf(spaceQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
-		return spaceDomainService.getLambdaQueryWrapper(spaceQueryRequest);
-	}
-
-	// endregion 其他相关
 }
 
 

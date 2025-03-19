@@ -1,5 +1,7 @@
 package com.baolong.pictures.interfaces.vo.category;
 
+import lombok.Data;
+
 import java.io.Serializable;
 
 /**
@@ -9,6 +11,7 @@ import java.io.Serializable;
  * @version 1.0
  * @since 1.8
  */
+@Data
 public class CategoryVO implements Serializable {
 
 	/**

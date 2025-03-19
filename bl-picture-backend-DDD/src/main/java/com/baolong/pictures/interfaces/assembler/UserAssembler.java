@@ -1,10 +1,12 @@
 package com.baolong.pictures.interfaces.assembler;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baolong.pictures.domain.user.entity.User;
 import com.baolong.pictures.interfaces.dto.user.UserAddRequest;
 import com.baolong.pictures.interfaces.dto.user.UserEditRequest;
 import com.baolong.pictures.interfaces.dto.user.UserUpdateRequest;
 import com.baolong.pictures.interfaces.vo.user.LoginUserVO;
+import com.baolong.pictures.interfaces.vo.user.UserDetailVO;
 import com.baolong.pictures.interfaces.vo.user.UserVO;
 import org.springframework.beans.BeanUtils;
 
@@ -22,7 +24,9 @@ public class UserAssembler {
 	 */
 	public static User toUserEntity(UserAddRequest userAddRequest) {
 		User user = new User();
-		BeanUtils.copyProperties(userAddRequest, user);
+		if (userAddRequest != null) {
+			BeanUtils.copyProperties(userAddRequest, user);
+		}
 		return user;
 	}
 
@@ -31,7 +35,9 @@ public class UserAssembler {
 	 */
 	public static User toUserEntity(UserUpdateRequest userUpdateRequest) {
 		User user = new User();
-		BeanUtils.copyProperties(userUpdateRequest, user);
+		if (userUpdateRequest != null) {
+			BeanUtils.copyProperties(userUpdateRequest, user);
+		}
 		return user;
 	}
 
@@ -40,7 +46,9 @@ public class UserAssembler {
 	 */
 	public static User toUserEntity(UserEditRequest userEditRequest) {
 		User user = new User();
-		BeanUtils.copyProperties(userEditRequest, user);
+		if (userEditRequest != null) {
+			BeanUtils.copyProperties(userEditRequest, user);
+		}
 		return user;
 	}
 
@@ -49,8 +57,22 @@ public class UserAssembler {
 	 */
 	public static LoginUserVO toLoginUserVO(User user) {
 		LoginUserVO loginUserVO = new LoginUserVO();
-		BeanUtils.copyProperties(user, loginUserVO);
+		if (user != null) {
+			BeanUtils.copyProperties(user, loginUserVO);
+			loginUserVO.setToken(StpUtil.getTokenInfo().getTokenValue());
+		}
 		return loginUserVO;
+	}
+
+	/**
+	 * 用户实体 转为 用户详情 VO
+	 */
+	public static UserDetailVO toUserDetailVO(User user) {
+		UserDetailVO userDetailVO = new UserDetailVO();
+		if (user != null) {
+			BeanUtils.copyProperties(user, userDetailVO);
+		}
+		return userDetailVO;
 	}
 
 	/**
@@ -58,7 +80,9 @@ public class UserAssembler {
 	 */
 	public static UserVO toUserVO(User user) {
 		UserVO userVO = new UserVO();
-		BeanUtils.copyProperties(user, userVO);
+		if (user != null) {
+			BeanUtils.copyProperties(user, userVO);
+		}
 		return userVO;
 	}
 }

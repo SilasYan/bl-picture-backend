@@ -8,7 +8,7 @@ public interface UserConstant {
 	/**
 	 * 用户登录态
 	 */
-	String USER_LOGIN_STATE = "user_login_state";
+	String USER_LOGIN_STATE = "USER_LOGIN_STATE:";
 
 	//  region 权限
 

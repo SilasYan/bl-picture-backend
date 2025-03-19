@@ -9,6 +9,7 @@ import com.baolong.pictures.interfaces.dto.space.SpaceAddRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceEditRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceQueryRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceUpdateRequest;
+import com.baolong.pictures.interfaces.vo.space.SpaceDetailVO;
 import com.baolong.pictures.interfaces.vo.space.SpaceLevelVO;
 import com.baolong.pictures.interfaces.vo.space.SpaceVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -19,6 +20,50 @@ import java.util.List;
  * 空间应用服务接口
  */
 public interface SpaceApplicationService {
+
+	// region 其他相关
+
+	/**
+	 * 校验空间上传权限
+	 *
+	 * @param spaceId   空间 ID
+	 * @param loginUser 用户对象
+	 */
+	void checkSpaceUploadAuth(Long spaceId, User loginUser);
+
+	/**
+	 * 校验空间权限
+	 *
+	 * @param space     空间对象
+	 * @param user      用户对象
+	 * @param loginUser 登录用户对象
+	 */
+	void checkSpaceAddAuth(Space space, User user, User loginUser);
+
+	/**
+	 * 校验空间编辑权限
+	 *
+	 * @param space     空间对象
+	 * @param loginUser 登录用户对象
+	 */
+	void checkSpaceChangeAuth(Space space, User loginUser);
+
+	/**
+	 * 校验空间是否存在
+	 *
+	 * @param spaceId 空间 ID
+	 */
+	void checkSpaceExisted(Long spaceId);
+
+	/**
+	 * 获取查询条件对象（Lambda）
+	 *
+	 * @param spaceQueryRequest 空间查询请求
+	 * @return 查询条件对象（Lambda）
+	 */
+	LambdaQueryWrapper<Space> getLambdaQueryWrapper(SpaceQueryRequest spaceQueryRequest);
+
+	// endregion 其他相关
 
 	// region 增删改
 
@@ -76,6 +121,13 @@ public interface SpaceApplicationService {
 	// region 查询相关
 
 	/**
+	 * 获取登录用户的空间详情
+	 *
+	 * @return 登录用户的空间详情
+	 */
+	SpaceDetailVO getSpaceDetailByLoginUser();
+
+	/**
 	 * 根据空间 ID 获取空间信息
 	 *
 	 * @param spaceId 空间 ID
@@ -84,12 +136,20 @@ public interface SpaceApplicationService {
 	Space getSpaceInfoById(Long spaceId);
 
 	/**
+	 * 根据用户 ID 获取个人空间信息
+	 *
+	 * @param userId 用户 ID
+	 * @return 空间信息
+	 */
+	Space getSpaceInfoByUserId(Long userId);
+
+	/**
 	 * 根据空间 ID 获取空间详情
 	 *
 	 * @param spaceId 空间 ID
 	 * @return 空间详情
 	 */
-	SpaceVO getSpaceVOById(Long spaceId);
+	SpaceDetailVO getSpaceVOById(Long spaceId);
 
 	/**
 	 * 获取用户空间列表
@@ -97,15 +157,15 @@ public interface SpaceApplicationService {
 	 * @param spaceQueryRequest 空间查询请求
 	 * @return 空间列表
 	 */
-	List<SpaceVO> getSpaceListAsUser(SpaceQueryRequest spaceQueryRequest);
+	List<SpaceDetailVO> getSpaceListAsUser(SpaceQueryRequest spaceQueryRequest);
 
 	/**
-	 * 获取空间分页列表（管理员）
+	 * 获取空间管理分页列表
 	 *
 	 * @param spaceQueryRequest 空间查询请求
-	 * @return 空间分页列表
+	 * @return 空间管理分页列表
 	 */
-	PageVO<Space> getSpacePageListAsAdmin(SpaceQueryRequest spaceQueryRequest);
+	PageVO<SpaceVO> getSpacePageListAsManage(SpaceQueryRequest spaceQueryRequest);
 
 	/**
 	 * 获取空间等级列表
@@ -115,48 +175,4 @@ public interface SpaceApplicationService {
 	List<SpaceLevelVO> getSpaceLevelList();
 
 	// endregion 查询相关
-
-	// region 其他相关
-
-	/**
-	 * 校验空间上传权限
-	 *
-	 * @param spaceId   空间 ID
-	 * @param loginUser 用户对象
-	 */
-	void checkSpaceUploadAuth(Long spaceId, User loginUser);
-
-	/**
-	 * 校验空间权限
-	 *
-	 * @param space     空间对象
-	 * @param user      用户对象
-	 * @param loginUser 登录用户对象
-	 */
-	void checkSpaceAddAuth(Space space, User user, User loginUser);
-
-	/**
-	 * 校验空间编辑权限
-	 *
-	 * @param space     空间对象
-	 * @param loginUser 登录用户对象
-	 */
-	void checkSpaceChangeAuth(Space space, User loginUser);
-
-	/**
-	 * 校验空间是否存在
-	 *
-	 * @param spaceId 空间 ID
-	 */
-	void checkSpaceExisted(Long spaceId);
-
-	/**
-	 * 获取查询条件对象（Lambda）
-	 *
-	 * @param spaceQueryRequest 空间查询请求
-	 * @return 查询条件对象（Lambda）
-	 */
-	LambdaQueryWrapper<Space> getLambdaQueryWrapper(SpaceQueryRequest spaceQueryRequest);
-
-	// endregion 其他相关
 }

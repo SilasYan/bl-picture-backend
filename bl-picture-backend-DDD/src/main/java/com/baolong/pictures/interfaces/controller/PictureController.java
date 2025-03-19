@@ -3,23 +3,30 @@ package com.baolong.pictures.interfaces.controller;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baolong.pictures.application.service.PictureApplicationService;
+import com.baolong.pictures.application.shared.auth.annotation.AuthCheck;
 import com.baolong.pictures.domain.picture.entity.Picture;
 import com.baolong.pictures.domain.user.constant.UserConstant;
-import com.baolong.pictures.infrastructure.annotation.AuthCheck;
+import com.baolong.pictures.infrastructure.api.grab.model.GrabPictureResult;
 import com.baolong.pictures.infrastructure.common.BaseResponse;
 import com.baolong.pictures.infrastructure.common.DeleteRequest;
 import com.baolong.pictures.infrastructure.common.ResultUtils;
 import com.baolong.pictures.infrastructure.common.page.PageVO;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
 import com.baolong.pictures.infrastructure.exception.ThrowUtils;
+import com.baolong.pictures.infrastructure.function.limit.annotation.Limit;
+import com.baolong.pictures.infrastructure.function.limit.enums.LimitType;
 import com.baolong.pictures.interfaces.dto.picture.PictureBatchEditRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureEditRequest;
+import com.baolong.pictures.interfaces.dto.picture.PictureGrabRequest;
+import com.baolong.pictures.interfaces.dto.picture.PictureInteractionRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureQueryRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureReviewRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUpdateRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUploadRequest;
-import com.baolong.pictures.interfaces.vo.picture.PictureSimpleVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureDetailVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureHomeVO;
 import com.baolong.pictures.interfaces.vo.picture.PictureVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +36,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * 图片接口
@@ -43,15 +52,25 @@ public class PictureController {
 	// region 增删改相关（包含上传图片）
 
 	/**
-	 * 上传图片（文件/URL）
+	 * 上传图片（文件）
 	 */
-	@PostMapping("/upload")
-	public BaseResponse<PictureVO> uploadPicture(@RequestPart("file") MultipartFile multipartFile,
-												 @RequestBody PictureUploadRequest pictureUploadRequest) {
-		String fileUrl = pictureUploadRequest.getFileUrl();
-		ThrowUtils.throwIf(multipartFile == null && StrUtil.isEmpty(fileUrl), ErrorCode.PARAMS_ERROR);
-		PictureVO pictureVO = pictureApplicationService.uploadPicture(multipartFile, pictureUploadRequest);
-		return ResultUtils.success(pictureVO);
+	@PostMapping("/upload/file")
+	public BaseResponse<PictureDetailVO> uploadPictureByFile(@RequestPart("file") MultipartFile multipartFile,
+															 PictureUploadRequest pictureUploadRequest) {
+		ThrowUtils.throwIf(multipartFile == null, ErrorCode.PARAMS_ERROR);
+		PictureDetailVO pictureDetailVO = pictureApplicationService.uploadPicture(multipartFile, pictureUploadRequest);
+		return ResultUtils.success(pictureDetailVO);
+	}
+
+	/**
+	 * 上传图片（URL）
+	 */
+	@PostMapping("/upload/url")
+	public BaseResponse<PictureDetailVO> uploadPictureByUrl(@RequestBody PictureUploadRequest pictureUploadRequest) {
+		String pictureUrl = pictureUploadRequest.getPictureUrl();
+		ThrowUtils.throwIf(StrUtil.isEmpty(pictureUrl), ErrorCode.PARAMS_ERROR);
+		PictureDetailVO pictureDetailVO = pictureApplicationService.uploadPicture(pictureUrl, pictureUploadRequest);
+		return ResultUtils.success(pictureDetailVO);
 	}
 
 	/**
@@ -80,6 +99,7 @@ public class PictureController {
 	 */
 	@PostMapping("/edit")
 	public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest) {
+		System.out.println(JSONUtil.parse(pictureEditRequest));
 		ThrowUtils.throwIf(pictureEditRequest == null, ErrorCode.PARAMS_ERROR);
 		ThrowUtils.throwIf(ObjectUtil.isEmpty(pictureEditRequest.getId()), ErrorCode.PARAMS_ERROR);
 		return ResultUtils.success(pictureApplicationService.editPicture(pictureEditRequest));
@@ -107,6 +127,15 @@ public class PictureController {
 		return ResultUtils.success(pictureApplicationService.reviewPicture(pictureReviewRequest));
 	}
 
+	/**
+	 * 爬取图片
+	 */
+	@PostMapping("/grab")
+	public BaseResponse<List<GrabPictureResult>> grabPicture(@RequestBody PictureGrabRequest pictureGrabRequest) {
+		ThrowUtils.throwIf(pictureGrabRequest == null, ErrorCode.PARAMS_ERROR);
+		return ResultUtils.success(pictureApplicationService.grabPicture(pictureGrabRequest));
+	}
+
 	// endregion 增删改相关（包含上传图片）
 
 	// region 查询相关
@@ -125,28 +154,44 @@ public class PictureController {
 	 * 根据图片 ID 获取图片详情
 	 */
 	@GetMapping("/detail")
-	public BaseResponse<PictureVO> getPictureDetailById(Long id) {
+	public BaseResponse<PictureDetailVO> getPictureDetailById(Long id) {
 		ThrowUtils.throwIf(ObjectUtil.isEmpty(id), ErrorCode.PARAMS_ERROR);
 		return ResultUtils.success(pictureApplicationService.getPictureDetailById(id));
 	}
 
 	/**
-	 * 获取首页图片分页列表（简单字段）
+	 * 获取首页图片列表
 	 */
-	@GetMapping("/list")
-	public BaseResponse<PageVO<PictureSimpleVO>> getPicturePageListAsSimple(PictureQueryRequest pictureQueryRequest) {
-		ThrowUtils.throwIf(pictureQueryRequest.getPageSize() > 15, ErrorCode.PARAMS_ERROR);
-		return ResultUtils.success(pictureApplicationService.getPicturePageListAsSimple(pictureQueryRequest));
+	@GetMapping("/home/list")
+	public BaseResponse<PageVO<PictureHomeVO>> getPicturePageListAsHome(PictureQueryRequest pictureQueryRequest) {
+		ThrowUtils.throwIf(pictureQueryRequest.getPageSize() > 20, ErrorCode.PARAMS_ERROR);
+		return ResultUtils.success(pictureApplicationService.getPicturePageListAsHome(pictureQueryRequest));
 	}
 
 	/**
-	 * 获取图片分页列表（管理员）
+	 * 获取图片管理分页列表
 	 */
-	@GetMapping("/admin/list")
+	@PostMapping("/manage/page")
 	@AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-	public BaseResponse<PageVO<Picture>> getPicturePageListAsAdmin(PictureQueryRequest pictureQueryRequest) {
-		return ResultUtils.success(pictureApplicationService.getPicturePageListAsAdmin(pictureQueryRequest));
+	public BaseResponse<PageVO<PictureVO>> getPicturePageListAsManage(@RequestBody PictureQueryRequest pictureQueryRequest) {
+		return ResultUtils.success(pictureApplicationService.getPicturePageListAsManage(pictureQueryRequest));
 	}
+
+	/**
+	 * 获取个人空间图片分页列表
+	 */
+	@PostMapping("/personSpace/page")
+	public BaseResponse<PageVO<PictureVO>> getPicturePageListAsPersonSpace(@RequestBody PictureQueryRequest pictureQueryRequest) {
+		return ResultUtils.success(pictureApplicationService.getPicturePageListAsPersonSpace(pictureQueryRequest));
+	}
+
+	// /**
+	//  * 根据登录用户获取图片标签列表
+	//  */
+	// @GetMapping("/tags")
+	// public BaseResponse<List<String>> getPictureTagListByLoginUser() {
+	// 	return ResultUtils.success(pictureApplicationService.getPictureTagListByLoginUser());
+	// }
 
 	// /**
 	//  * 根据颜色搜索图片
@@ -159,6 +204,41 @@ public class PictureController {
 	// }
 
 	// endregion 查询相关
+
+	/**
+	 * 图片下载
+	 */
+	@Limit(key = "PictureDownload:", count = 1, limitType = LimitType.IP, errMsg = "图片下载太频繁，请稍后再试!")
+	@PostMapping("/download")
+	public BaseResponse<String> pictureDownload(@RequestBody PictureInteractionRequest pictureInteractionRequest) {
+		ThrowUtils.throwIf(pictureInteractionRequest == null, ErrorCode.PARAMS_ERROR);
+		ThrowUtils.throwIf(ObjectUtil.isEmpty(pictureInteractionRequest.getId()), ErrorCode.PARAMS_ERROR);
+		return ResultUtils.success(pictureApplicationService.pictureDownload(pictureInteractionRequest.getId()));
+	}
+
+	/**
+	 * 图片分享
+	 */
+	@Limit(key = "PictureShare:", time = 5, count = 1, limitType = LimitType.IP, errMsg = "图片分享太频繁，请稍后再试!")
+	@PostMapping("/share")
+	public BaseResponse<Boolean> pictureShare(@RequestBody PictureInteractionRequest pictureInteractionRequest) {
+		ThrowUtils.throwIf(pictureInteractionRequest == null, ErrorCode.PARAMS_ERROR);
+		ThrowUtils.throwIf(ObjectUtil.isEmpty(pictureInteractionRequest.getId()), ErrorCode.PARAMS_ERROR);
+		return ResultUtils.success(pictureApplicationService.pictureShare(pictureInteractionRequest.getId()));
+	}
+
+	/**
+	 * 图片点赞
+	 */
+	@Limit(key = "PictureLike:", time = 5, count = 2, limitType = LimitType.IP, errMsg = "图片点赞太频繁，请稍后再试!")
+	@PostMapping("/interaction")
+	public BaseResponse<Boolean> pictureLikeOrCollect(@RequestBody PictureInteractionRequest pictureInteractionRequest) {
+		ThrowUtils.throwIf(pictureInteractionRequest == null, ErrorCode.PARAMS_ERROR);
+		ThrowUtils.throwIf(ObjectUtil.isEmpty(pictureInteractionRequest.getId()), ErrorCode.PARAMS_ERROR);
+		ThrowUtils.throwIf(ObjectUtil.isEmpty(pictureInteractionRequest.getType()), ErrorCode.PARAMS_ERROR);
+		ThrowUtils.throwIf(ObjectUtil.isEmpty(pictureInteractionRequest.getChange()), ErrorCode.PARAMS_ERROR);
+		return ResultUtils.success(pictureApplicationService.pictureLikeOrCollect(pictureInteractionRequest));
+	}
 
 	//
 	// /**

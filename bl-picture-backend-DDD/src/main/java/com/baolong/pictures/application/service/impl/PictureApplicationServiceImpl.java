@@ -1,26 +1,44 @@
 package com.baolong.pictures.application.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+import com.baolong.pictures.application.service.CategoryApplicationService;
 import com.baolong.pictures.application.service.PictureApplicationService;
 import com.baolong.pictures.application.service.SpaceApplicationService;
 import com.baolong.pictures.application.service.UserApplicationService;
+import com.baolong.pictures.domain.category.entity.Category;
 import com.baolong.pictures.domain.picture.entity.Picture;
+import com.baolong.pictures.domain.picture.entity.PictureInteraction;
+import com.baolong.pictures.domain.picture.enums.PictureInteractionStatusEnum;
+import com.baolong.pictures.domain.picture.enums.PictureInteractionTypeEnum;
+import com.baolong.pictures.domain.picture.enums.PictureShareStatusEnum;
 import com.baolong.pictures.domain.picture.service.PictureDomainService;
+import com.baolong.pictures.domain.picture.service.PictureInteractionDomainService;
+import com.baolong.pictures.domain.space.entity.Space;
 import com.baolong.pictures.domain.user.entity.User;
+import com.baolong.pictures.infrastructure.api.cos.CosManager;
+import com.baolong.pictures.infrastructure.api.grab.model.GrabPictureResult;
 import com.baolong.pictures.infrastructure.common.DeleteRequest;
 import com.baolong.pictures.infrastructure.common.page.PageVO;
+import com.baolong.pictures.infrastructure.exception.BusinessException;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
 import com.baolong.pictures.infrastructure.exception.ThrowUtils;
 import com.baolong.pictures.interfaces.assembler.PictureAssembler;
 import com.baolong.pictures.interfaces.dto.picture.PictureBatchEditRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureEditRequest;
+import com.baolong.pictures.interfaces.dto.picture.PictureGrabRequest;
+import com.baolong.pictures.interfaces.dto.picture.PictureInteractionRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureQueryRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureReviewRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUpdateRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUploadRequest;
-import com.baolong.pictures.interfaces.vo.picture.PictureSimpleVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureDetailVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureHomeVO;
 import com.baolong.pictures.interfaces.vo.picture.PictureVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +46,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,9 +64,62 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 	private final PictureDomainService pictureDomainService;
 	private final UserApplicationService userApplicationService;
 	private final SpaceApplicationService spaceApplicationService;
+	private final CategoryApplicationService categoryApplicationService;
+	private final PictureInteractionDomainService pictureInteractionDomainService;
 
 	@Resource
+	private CosManager cosManager;
+	@Resource
 	private TransactionTemplate transactionTemplate;
+
+	// region 其他方法
+
+	/**
+	 * 获取查询条件对象（Lambda）
+	 *
+	 * @param pictureQueryRequest 图片查询请求
+	 * @return 查询条件对象（Lambda）
+	 */
+	@Override
+	public LambdaQueryWrapper<Picture> getLambdaQueryWrapper(PictureQueryRequest pictureQueryRequest) {
+		ThrowUtils.throwIf(pictureQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
+		return pictureDomainService.getLambdaQueryWrapper(pictureQueryRequest);
+	}
+
+	/**
+	 * 校验并填充审核参数
+	 *
+	 * @param picture   图片对象
+	 * @param loginUser 登录用户
+	 */
+	@Override
+	public void checkAndFillReviewParams(Picture picture, User loginUser) {
+		pictureDomainService.checkAndFillReviewParams(picture, loginUser);
+	}
+
+	/**
+	 * 校验图片操作权限
+	 *
+	 * @param picture   图片对象
+	 * @param loginUser 登录用户
+	 */
+	@Override
+	public void checkPictureChangeAuth(Picture picture, User loginUser) {
+		pictureDomainService.checkPictureChangeAuth(picture, loginUser);
+	}
+
+	/**
+	 * 填充图片名称规则
+	 *
+	 * @param pictureList 图片列表
+	 * @param nameRule    名称规则
+	 */
+	@Override
+	public void fillPictureNameRuleBatch(List<Picture> pictureList, String nameRule) {
+		pictureDomainService.fillPictureNameRuleBatch(pictureList, nameRule);
+	}
+
+	// endregion 其他方法
 
 	// region 增删改相关（包含上传图片）
 
@@ -58,7 +131,7 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 	 * @return PictureVO
 	 */
 	@Override
-	public PictureVO uploadPicture(Object pictureInputSource, PictureUploadRequest pictureUploadRequest) {
+	public PictureDetailVO uploadPicture(Object pictureInputSource, PictureUploadRequest pictureUploadRequest) {
 		Picture picture = PictureAssembler.toPictureEntity(pictureUploadRequest);
 		User loginUser = userApplicationService.getLoginUser();
 		Long userId = loginUser.getId();
@@ -78,7 +151,10 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 
 		// 跟空间相关, 则需要校验空间权限
 		Long spaceId = pictureUploadRequest.getSpaceId();
-		spaceApplicationService.checkSpaceUploadAuth(picture.getSpaceId(), loginUser);
+		if (ObjectUtil.isNotEmpty(spaceId) && !spaceId.equals(0L)) {
+			spaceApplicationService.checkSpaceUploadAuth(spaceId, loginUser);
+			picture.setSpaceId(spaceId);
+		}
 
 		// 校验并填充审核参数
 		this.checkAndFillReviewParams(picture, loginUser);
@@ -86,24 +162,24 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 		// 开启事务执行数据库操作
 		Picture resultPicture = transactionTemplate.execute(status -> {
 			Boolean result = pictureDomainService.uploadPicture(
-					pictureInputSource == null ? pictureUploadRequest.getFileUrl() : pictureInputSource, picture
+					pictureInputSource == null ? pictureUploadRequest.getPictureUrl() : pictureInputSource, picture
 			);
 			ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
 			if (oldPicture != null) {
+				// 删除存储服务器中的旧图片
+				pictureDomainService.clearPictureFile(oldPicture);
 				// 更新空间额度
 				Boolean updated = spaceApplicationService.updateSpaceSizeAndCount(spaceId, -oldPicture.getOriginSize(), -1L);
 				ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
-				// 删除存储服务器中的旧图片
-				pictureDomainService.clearPictureFile(oldPicture);
 			}
-			if (ObjectUtil.isNotNull(spaceId) || !spaceId.equals(0L)) {
+			if (ObjectUtil.isNotEmpty(spaceId) && !spaceId.equals(0L)) {
 				Boolean updated = spaceApplicationService.updateSpaceSizeAndCount(spaceId, picture.getOriginSize(), 1L);
 				ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
 			}
 			return picture;
 		});
 
-		return PictureAssembler.toPictureVO(resultPicture);
+		return PictureAssembler.toPictureDetailVO(resultPicture);
 	}
 
 	/**
@@ -128,9 +204,11 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 			// 操作数据库
 			Boolean result = pictureDomainService.deletePicture(deleteRequest.getId());
 			ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-			// 更新空间额度
-			Boolean updated = spaceApplicationService.updateSpaceSizeAndCount(picture.getSpaceId(), -picture.getOriginSize(), -1L);
-			ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+			if (picture.getSpaceId() != null && !picture.getSpaceId().equals(0L)) {
+				// 更新空间额度
+				Boolean updated = spaceApplicationService.updateSpaceSizeAndCount(picture.getSpaceId(), -picture.getOriginSize(), -1L);
+				ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+			}
 			// 删除存储服务器中的旧图片
 			pictureDomainService.clearPictureFile(picture);
 			return true;
@@ -194,11 +272,12 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 		// 数据校验
 		picture.validPictureUpdateAndEdit();
 		// 判断图片是否存在
-		Boolean existed = pictureDomainService.existPictureById(pictureEditRequest.getId());
-		ThrowUtils.throwIf(!existed, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+		Picture oldPicture = pictureDomainService.getPictureById(pictureEditRequest.getId());
+		ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
 		User loginUser = userApplicationService.getLoginUser();
+		System.out.println(loginUser);
 		// 校验图片操作权限
-		this.checkPictureChangeAuth(picture, loginUser);
+		this.checkPictureChangeAuth(oldPicture, loginUser);
 		// 校验并填充审核参数
 		this.checkAndFillReviewParams(picture, loginUser);
 		// 跟空间相关, 则需要校验空间权限
@@ -308,49 +387,125 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 	 * @return 图片详情
 	 */
 	@Override
-	public PictureVO getPictureDetailById(Long pictureId) {
+	public PictureDetailVO getPictureDetailById(Long pictureId) {
 		Picture picture = pictureDomainService.getPictureById(pictureId);
-		PictureVO pictureVO = PictureAssembler.toPictureVO(picture);
-		// 查询用户信息
+		if (picture == null) {
+			throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+		}
+		PictureDetailVO pictureDetailVO;
+		// 如果当前用户没登录则只获取简单字段即可
+		if (!StpUtil.isLogin()) {
+			PictureHomeVO PictureHomeVO = PictureAssembler.toPictureSimpleVO(picture);
+			pictureDetailVO = PictureAssembler.toPictureDetailVO(PictureHomeVO);
+		} else {
+			pictureDetailVO = PictureAssembler.toPictureDetailVO(picture);
+		}
+		// 查询图片的用户信息
 		User user = userApplicationService.getUserInfoById(picture.getUserId());
 		if (user != null) {
-			pictureVO.setUserName(user.getUserName());
-			pictureVO.setUserAvatar(user.getUserAvatar());
+			pictureDetailVO.setUserName(user.getUserName());
+			pictureDetailVO.setUserAvatar(user.getUserAvatar());
 		} else {
-			pictureVO.setUserName("未知用户");
+			pictureDetailVO.setUserName("未知用户");
 		}
-		// TODO 查询分类信息、标签信息
-		return pictureVO;
+		// 查询分类信息
+		if (pictureDetailVO.getCategoryId() != null) {
+			Category category = categoryApplicationService.getCategoryInfoById(pictureDetailVO.getCategoryId());
+			if (category != null) {
+				pictureDetailVO.setCategoryName(category.getName());
+			}
+		}
+		// 查询空间信息
+		if (pictureDetailVO.getSpaceId() != null) {
+			Space space = spaceApplicationService.getSpaceInfoById(pictureDetailVO.getSpaceId());
+			if (space != null) {
+				pictureDetailVO.setSpaceName(space.getSpaceName());
+				pictureDetailVO.setSpaceType(space.getSpaceType());
+			}
+		}
+		// 标签信息
+		if (StrUtil.isNotEmpty(pictureDetailVO.getTags())) {
+			pictureDetailVO.setTagList(Arrays.asList(pictureDetailVO.getTags().split(",")));
+		}
+		// 查询当前登录用户对该图片的 点赞和收藏 信息
+		if (StpUtil.isLogin()) {
+			List<PictureInteraction> list = pictureInteractionDomainService.list(new LambdaQueryWrapper<PictureInteraction>()
+					.eq(PictureInteraction::getPictureId, pictureId)
+					.eq(PictureInteraction::getUserId, StpUtil.getLoginIdAsLong())
+			);
+			if (CollUtil.isNotEmpty(list)) {
+				for (PictureInteraction pictureInteraction : list) {
+					if (pictureInteraction.getInteractionType().equals(PictureInteractionTypeEnum.LIKE.getKey())) {
+						pictureDetailVO.setLoginUserIsLike(
+								PictureInteractionStatusEnum.isExisted(pictureInteraction.getInteractionStatus()));
+					}
+					if (pictureInteraction.getInteractionType().equals(PictureInteractionTypeEnum.COLLECT.getKey())) {
+						pictureDetailVO.setLoginUserIsCollect(
+								PictureInteractionStatusEnum.isExisted(pictureInteraction.getInteractionStatus()));
+					}
+				}
+			}
+		}
+		pictureView(pictureId);
+		return pictureDetailVO;
 	}
 
 	/**
-	 * 获取首页图片分页列表（简单字段）
+	 * 获取首页图片列表
 	 *
 	 * @param pictureQueryRequest 图片查询请求
-	 * @return 图片分页列表
+	 * @return 首页图片列表
 	 */
 	@Override
-	public PageVO<PictureSimpleVO> getPicturePageListAsSimple(PictureQueryRequest pictureQueryRequest) {
-		Page<Picture> picturePage = pictureDomainService.getPicturePageListAsSimple(
+	public PageVO<PictureHomeVO> getPicturePageListAsHome(PictureQueryRequest pictureQueryRequest) {
+		pictureQueryRequest.setSpaceId(0L);
+		Page<Picture> picturePage = pictureDomainService.getPicturePageListAsHome(
 				pictureQueryRequest.getPage(Picture.class), this.getLambdaQueryWrapper(pictureQueryRequest)
 		);
-		List<PictureSimpleVO> simpleVOS = picturePage.getRecords().stream()
+		List<PictureHomeVO> simpleVOS = picturePage.getRecords().stream()
 				.map(PictureAssembler::toPictureSimpleVO)
 				.collect(Collectors.toList());
-		// 查询图片的用户信息
-		Set<Long> userIds = simpleVOS.stream().map(PictureSimpleVO::getUserId).collect(Collectors.toSet());
-		Map<Long, List<User>> userListMap = userApplicationService.getUserListByIds(userIds)
-				.stream()
-				.collect(Collectors.groupingBy(User::getId));
-		simpleVOS.forEach(picture -> {
-			Long userId = picture.getUserId();
-			if (userListMap.containsKey(userId)) {
-				picture.setUserName(userListMap.get(userId).get(0).getUserName());
-				picture.setUserAvatar(userListMap.get(userId).get(0).getUserAvatar());
+		if (!simpleVOS.isEmpty()) {
+			// 查询图片的用户信息
+			Set<Long> userIds = simpleVOS.stream().map(PictureHomeVO::getUserId).collect(Collectors.toSet());
+			Map<Long, List<User>> userListMap = userApplicationService.getUserListByIds(userIds)
+					.stream()
+					.collect(Collectors.groupingBy(User::getId));
+			// 查询当前登录用户对该图片的 点赞和收藏 信息
+			Map<Long, Boolean> likeMap = new HashMap<>();
+			Map<Long, Boolean> collectMap = new HashMap<>();
+			if (StpUtil.isLogin()) {
+				Set<Long> pictureIds = simpleVOS.stream().map(PictureHomeVO::getId).collect(Collectors.toSet());
+				List<PictureInteraction> pictureInteractions = pictureInteractionDomainService.list(new LambdaQueryWrapper<PictureInteraction>()
+						.eq(PictureInteraction::getUserId, StpUtil.getLoginIdAsLong())
+						.in(PictureInteraction::getPictureId, pictureIds)
+				);
+				if (CollUtil.isNotEmpty(pictureInteractions)) {
+					pictureInteractions.forEach(pi->{
+						if (PictureInteractionTypeEnum.LIKE.getKey().equals(pi.getInteractionType()) &&
+								PictureInteractionStatusEnum.isExisted(pi.getInteractionStatus())) {
+							likeMap.put(pi.getPictureId(), true);
+						}
+						if (PictureInteractionTypeEnum.COLLECT.getKey().equals(pi.getInteractionType()) &&
+								PictureInteractionStatusEnum.isExisted(pi.getInteractionStatus())) {
+							collectMap.put(pi.getPictureId(), true);
+						}
+					});
+				}
 			}
-			// TODO 分类和标签的处理
-		});
-
+			simpleVOS.forEach(picture -> {
+				// 设置作者信息
+				Long userId = picture.getUserId();
+				if (userListMap.containsKey(userId)) {
+					picture.setUserName(userListMap.get(userId).get(0).getUserName());
+					picture.setUserAvatar(userListMap.get(userId).get(0).getUserAvatar());
+				}
+				// 设置当前登录用户点赞和收藏信息
+				picture.setLoginUserIsLike(likeMap.getOrDefault(picture.getId(), false));
+				picture.setLoginUserIsCollect(collectMap.getOrDefault(picture.getId(), false));
+				// TODO 分类和标签的处理
+			});
+		}
 		// TODO 是否需要加入到缓存?
 		return new PageVO<>(picturePage.getCurrent()
 				, picturePage.getSize()
@@ -361,17 +516,99 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 	}
 
 	/**
-	 * 获取图片分页列表（管理员）
+	 * 获取图片管理分页列表
 	 *
 	 * @param pictureQueryRequest 图片查询请求
-	 * @return 图片分页列表
+	 * @return 图片管理分页列表
 	 */
 	@Override
-	public PageVO<Picture> getPicturePageListAsAdmin(PictureQueryRequest pictureQueryRequest) {
-		Page<Picture> picturePage = pictureDomainService.getPicturePageListAsAdmin(
+	public PageVO<PictureVO> getPicturePageListAsManage(PictureQueryRequest pictureQueryRequest) {
+		Page<Picture> picturePage = pictureDomainService.getPicturePageListAsManage(
 				pictureQueryRequest.getPage(Picture.class), this.getLambdaQueryWrapper(pictureQueryRequest)
 		);
-		return PageVO.from(picturePage);
+		List<PictureVO> pictureVOS = picturePage.getRecords().stream()
+				.map(PictureAssembler::toPictureVO)
+				.collect(Collectors.toList());
+		if (!pictureVOS.isEmpty()) {
+			// 查询图片的用户信息
+			Set<Long> userIds = pictureVOS.stream().map(PictureVO::getUserId).collect(Collectors.toSet());
+			Map<Long, List<User>> userListMap = userApplicationService.getUserListByIds(userIds)
+					.stream().collect(Collectors.groupingBy(User::getId));
+			// 查询分类信息
+			Set<Long> categoryIds = pictureVOS.stream().map(PictureVO::getCategoryId).collect(Collectors.toSet());
+			Map<Long, List<Category>> categoryListMap = categoryApplicationService.getCategoryListByIds(categoryIds)
+					.stream().collect(Collectors.groupingBy(Category::getId));
+			pictureVOS.forEach(picture -> {
+				Long userId = picture.getUserId();
+				if (userListMap.containsKey(userId)) {
+					picture.setUserInfo(userListMap.get(userId).get(0));
+				}
+				Long categoryId = picture.getCategoryId();
+				if (categoryListMap.containsKey(categoryId)) {
+					picture.setCategoryInfo(categoryListMap.get(categoryId).get(0));
+				}
+			});
+		}
+		return new PageVO<>(picturePage.getCurrent()
+				, picturePage.getSize()
+				, picturePage.getTotal()
+				, picturePage.getPages()
+				, pictureVOS
+		);
+	}
+
+	/**
+	 * 获取个人空间图片分页列表
+	 *
+	 * @param pictureQueryRequest 图片查询请求
+	 * @return 个人空间图片分页列表
+	 */
+	@Override
+	public PageVO<PictureVO> getPicturePageListAsPersonSpace(PictureQueryRequest pictureQueryRequest) {
+		User loginUser = userApplicationService.getLoginUser();
+		// 查询当前登录用户是否创建了空间
+		Space space = spaceApplicationService.getSpaceInfoByUserId(loginUser.getId());
+		ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "当前用户未创建个人空间");
+		pictureQueryRequest.setSpaceId(space.getId());
+		Page<Picture> picturePage = pictureDomainService.getPicturePageListAsPersonSpace(
+				pictureQueryRequest.getPage(Picture.class), this.getLambdaQueryWrapper(pictureQueryRequest)
+		);
+		List<PictureVO> pictureVOS = picturePage.getRecords().stream()
+				.map(PictureAssembler::toPictureVO)
+				.collect(Collectors.toList());
+		if (!pictureVOS.isEmpty()) {
+			// 查询分类信息
+			Set<Long> categoryIds = pictureVOS.stream().map(PictureVO::getCategoryId).collect(Collectors.toSet());
+			Map<Long, List<Category>> categoryListMap = categoryApplicationService.getCategoryListByIds(categoryIds)
+					.stream().collect(Collectors.groupingBy(Category::getId));
+			pictureVOS.forEach(picture -> {
+				Long categoryId = picture.getCategoryId();
+				if (categoryListMap.containsKey(categoryId)) {
+					picture.setCategoryInfo(categoryListMap.get(categoryId).get(0));
+				}
+			});
+		}
+		return new PageVO<>(picturePage.getCurrent()
+				, picturePage.getSize()
+				, picturePage.getTotal()
+				, picturePage.getPages()
+				, pictureVOS
+		);
+	}
+
+	/**
+	 * 爬取图片
+	 *
+	 * @param pictureGrabRequest 图片抓取请求
+	 * @return 爬取的图片列表
+	 */
+	@Override
+	public List<GrabPictureResult> grabPicture(PictureGrabRequest pictureGrabRequest) {
+		String keyword = pictureGrabRequest.getKeyword();
+		if (StrUtil.isEmpty(keyword)) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "关键词不能为空");
+		}
+		return pictureDomainService.grabPicture(pictureGrabRequest);
 	}
 
 	// /**
@@ -419,140 +656,109 @@ public class PictureApplicationServiceImpl implements PictureApplicationService 
 
 	// endregion 查询相关
 
-	// region 其他方法
-
 	/**
-	 * 获取查询条件对象（Lambda）
+	 * 图片下载
 	 *
-	 * @param pictureQueryRequest 图片查询请求
-	 * @return 查询条件对象（Lambda）
+	 * @param pictureId 图片 ID
+	 * @return 原图地址
 	 */
 	@Override
-	public LambdaQueryWrapper<Picture> getLambdaQueryWrapper(PictureQueryRequest pictureQueryRequest) {
-		ThrowUtils.throwIf(pictureQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
-		return pictureDomainService.getLambdaQueryWrapper(pictureQueryRequest);
+	public String pictureDownload(Long pictureId) {
+		StpUtil.checkLogin();
+		Picture picture = pictureDomainService.getPictureById(pictureId);
+		if (picture == null) {
+			throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+		}
+		// 更新互动类型数量
+		pictureDomainService.updateInteractionNum(pictureId, PictureInteractionTypeEnum.DOWNLOAD.getKey(), 1);
+		return picture.getOriginUrl();
 	}
 
 	/**
-	 * 校验并填充审核参数
+	 * 图片分享
 	 *
-	 * @param picture   图片对象
-	 * @param loginUser 登录用户
+	 * @param pictureId 图片 ID
+	 * @return true
 	 */
 	@Override
-	public void checkAndFillReviewParams(Picture picture, User loginUser) {
-		pictureDomainService.checkAndFillReviewParams(picture, loginUser);
+	public Boolean pictureShare(Long pictureId) {
+		StpUtil.checkLogin();
+		Picture picture = pictureDomainService.getPictureById(pictureId);
+		if (picture == null) {
+			throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在!");
+		}
+		if (!PictureShareStatusEnum.isShare(picture.getIsShare())) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "当前图片作者不允许分享!");
+		}
+		// 更新互动类型数量
+		pictureDomainService.updateInteractionNum(pictureId, PictureInteractionTypeEnum.SHARE.getKey(), 1);
+		return true;
 	}
 
 	/**
-	 * 校验图片操作权限
+	 * 图片查看
 	 *
-	 * @param picture   图片对象
-	 * @param loginUser 登录用户
+	 * @param pictureId 图片 ID
 	 */
 	@Override
-	public void checkPictureChangeAuth(Picture picture, User loginUser) {
-		pictureDomainService.checkPictureChangeAuth(picture, loginUser);
+	public void pictureView(Long pictureId) {
+		// 更新互动类型数量
+		pictureDomainService.updateInteractionNum(pictureId, PictureInteractionTypeEnum.VIEW.getKey(), 1);
 	}
 
 	/**
-	 * 填充图片名称规则
+	 * 图片点赞或收藏
 	 *
-	 * @param pictureList 图片列表
-	 * @param nameRule    名称规则
+	 * @param pictureInteractionRequest 图片互动请求
+	 * @return true
 	 */
 	@Override
-	public void fillPictureNameRuleBatch(List<Picture> pictureList, String nameRule) {
-		pictureDomainService.fillPictureNameRuleBatch(pictureList, nameRule);
+	public Boolean pictureLikeOrCollect(PictureInteractionRequest pictureInteractionRequest) {
+		Long pictureId = pictureInteractionRequest.getId();
+		Picture picture = pictureDomainService.getPictureById(pictureId);
+		if (picture == null) {
+			throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在!");
+		}
+		User loginUser = userApplicationService.getLoginUser();
+		Long userId = loginUser.getId();
+		LambdaQueryWrapper<PictureInteraction> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PictureInteraction::getPictureId, pictureId);
+		queryWrapper.eq(PictureInteraction::getUserId, userId);
+		if (PictureInteractionTypeEnum.LIKE.getKey().equals(pictureInteractionRequest.getType())) {
+			queryWrapper.eq(PictureInteraction::getInteractionType, PictureInteractionTypeEnum.LIKE.getKey());
+		} else if (PictureInteractionTypeEnum.COLLECT.getKey().equals(pictureInteractionRequest.getType())) {
+			queryWrapper.eq(PictureInteraction::getInteractionType, PictureInteractionTypeEnum.COLLECT.getKey());
+		} else {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片互动类型错误!");
+		}
+		PictureInteraction pictureInteraction = pictureInteractionDomainService.getOne(queryWrapper);
+		if (pictureInteraction == null) {
+			pictureInteraction = new PictureInteraction();
+			pictureInteraction.setPictureId(pictureId);
+			pictureInteraction.setUserId(userId);
+			pictureInteraction.setInteractionType(pictureInteractionRequest.getType());
+			pictureInteractionDomainService.save(pictureInteraction);
+			// 更新互动类型数量
+			pictureDomainService.updateInteractionNum(pictureId, pictureInteractionRequest.getType(), 1);
+		} else {
+			pictureInteraction.setInteractionStatus(pictureInteractionRequest.getChange());
+			pictureInteractionDomainService.update(new LambdaUpdateWrapper<PictureInteraction>()
+					.set(PictureInteraction::getInteractionStatus, pictureInteractionRequest.getChange())
+					.eq(PictureInteraction::getUserId, userId)
+					.eq(PictureInteraction::getPictureId, pictureId)
+					.eq(PictureInteraction::getInteractionType, pictureInteractionRequest.getType())
+			);
+			if (PictureInteractionStatusEnum.CANCEL.getKey().equals(pictureInteraction.getInteractionStatus())) {
+				// 更新互动类型数量
+				pictureDomainService.updateInteractionNum(pictureId, pictureInteractionRequest.getType(), -1);
+			} else {
+				// 更新互动类型数量
+				pictureDomainService.updateInteractionNum(pictureId, pictureInteractionRequest.getType(), 1);
+			}
+		}
+		return true;
 	}
 
-	// endregion 其他方法
-
-	//
-	// /**
-	//  * 批量抓取和创建图片
-	//  *
-	//  * @param pictureGrabUploadRequest 图片批量上传请求对象
-	//  * @param loginTUser               登录用户
-	//  * @return 成功创建的图片数
-	//  */
-	// @Override
-	// public Integer uploadPictureByBatch(PictureGrabUploadRequest pictureGrabUploadRequest, User loginTUser) {
-	// 	String searchText = pictureGrabUploadRequest.getSearchText();
-	// 	// 格式化数量
-	// 	Integer count = pictureGrabUploadRequest.getCount();
-	// 	// 获取图片名称前缀, 如果没有则默认使用关键词
-	// 	String namePrefix = pictureGrabUploadRequest.getNamePrefix();
-	// 	if (StrUtil.isBlank(namePrefix)) {
-	// 		namePrefix = searchText;
-	// 	}
-	// 	ThrowUtils.throwIf(count > 30, ErrorCode.PARAMS_ERROR, "最多 30 条");
-	// 	// 要抓取的地址
-	// 	String fetchUrl = String.format("https://cn.bing.com/images/async?q=%s&mmasync=1", searchText);
-	// 	Document document;
-	// 	try {
-	// 		document = Jsoup.connect(fetchUrl).get();
-	// 	} catch (IOException e) {
-	// 		log.error("获取页面失败", e);
-	// 		throw new BusinessException(ErrorCode.OPERATION_ERROR, "获取页面失败");
-	// 	}
-	// 	Element div = document.getElementsByClass("dgControl").first();
-	// 	if (ObjUtil.isNull(div)) {
-	// 		throw new BusinessException(ErrorCode.OPERATION_ERROR, "获取元素失败");
-	// 	}
-	// 	// TODO 获取高清的图片
-	// 	// Elements imgElementList = div.select("img.mimg");
-	// 	Elements imgElementList = div.select(".iusc");
-	// 	int uploadCount = 0;
-	// 	for (Element imgElement : imgElementList) {
-	// 		// TODO 获取高清的图片 START
-	// 		// String fileUrl = imgElement.attr("src");
-	// 		String dataM = imgElement.attr("m");
-	// 		String fileUrl;
-	// 		try {
-	// 			fileUrl = JSONUtil.parseObj(dataM).getStr("murl");
-	// 		} catch (Exception e) {
-	// 			log.error("解析图片数据失败", e);
-	// 			continue;
-	// 		}
-	// 		// TODO 获取高清的图片 END
-	//
-	// 		if (StrUtil.isBlank(fileUrl)) {
-	// 			log.info("当前链接为空，已跳过: {}", fileUrl);
-	// 			continue;
-	// 		}
-	// 		// 处理图片上传地址，防止出现转义问题
-	// 		int questionMarkIndex = fileUrl.indexOf("?");
-	// 		if (questionMarkIndex > -1) {
-	// 			fileUrl = fileUrl.substring(0, questionMarkIndex);
-	// 		}
-	// 		// 上传图片
-	// 		PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
-	// 		if (StrUtil.isNotBlank(namePrefix)) {
-	// 			// 设置图片名称，序号连续递增
-	// 			pictureUploadRequest.setPicName(namePrefix + (uploadCount + 1));
-	// 		}
-	// 		if (ObjUtil.isNotEmpty(pictureGrabUploadRequest.getCategory())) {
-	// 			pictureUploadRequest.setCategory(pictureGrabUploadRequest.getCategory());
-	// 		}
-	// 		if (pictureGrabUploadRequest.getTags() != null && !pictureGrabUploadRequest.getTags().isEmpty()) {
-	// 			pictureUploadRequest.setTags(String.join(",", pictureGrabUploadRequest.getTags()));
-	// 		}
-	//
-	// 		try {
-	// 			PictureVO pictureVO = this.uploadPicture(fileUrl, pictureUploadRequest, loginTUser);
-	// 			log.info("图片上传成功, id = {}", pictureVO.getId());
-	// 			uploadCount++;
-	// 		} catch (Exception e) {
-	// 			log.error("图片上传失败", e);
-	// 			continue;
-	// 		}
-	// 		if (uploadCount >= count) {
-	// 			break;
-	// 		}
-	// 	}
-	// 	return uploadCount;
-	// }
 	// /**
 	//  * 创建图片扩图任务
 	//  *

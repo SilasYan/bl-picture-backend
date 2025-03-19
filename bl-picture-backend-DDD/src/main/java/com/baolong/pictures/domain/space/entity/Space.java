@@ -6,6 +6,7 @@ import com.baolong.pictures.domain.space.enums.SpaceLevelEnum;
 import com.baolong.pictures.domain.space.enums.SpaceTypeEnum;
 import com.baolong.pictures.infrastructure.exception.BusinessException;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -80,6 +81,7 @@ public class Space implements Serializable {
 	/**
 	 * 编辑时间
 	 */
+	@TableField(value = "edit_time", fill = FieldFill.UPDATE)
 	private Date editTime;
 
 	/**

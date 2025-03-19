@@ -17,9 +17,9 @@ public class PictureUploadRequest implements Serializable {
 	private Long id;
 
 	/**
-	 * 文件地址
+	 * 图片地址
 	 */
-	private String fileUrl;
+	private String pictureUrl;
 
 	/**
 	 * 图片名称（展示）
@@ -34,17 +34,12 @@ public class PictureUploadRequest implements Serializable {
 	/**
 	 * 分类 ID
 	 */
-	private Long category;
+	private Long categoryId;
 
 	/**
-	 * 标签 ID 列表
+	 * 标签列表
 	 */
-	private List<Long> tags;
-
-	/**
-	 * 输入的标签列表
-	 */
-	private List<String> inputTagList;
+	private List<String> tags;
 
 	/**
 	 * 空间 ID

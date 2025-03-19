@@ -12,104 +12,16 @@ import com.baolong.pictures.interfaces.dto.space.SpaceQueryRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 空间领域服务实现
+ * 空间表 (space) - 领域服务实现
  */
 @Service
-public class SpaceDomainServiceImpl implements SpaceDomainService {
-	@Resource
-	private SpaceRepository spaceRepository;
-
-	// region 增删改相关
-
-	/**
-	 * 创建空间
-	 *
-	 * @param space 空间对象
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean addSpace(Space space) {
-		return spaceRepository.save(space);
-	}
-
-	/**
-	 * 删除空间
-	 *
-	 * @param spaceId 空间ID
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean deleteSpace(Long spaceId) {
-		return spaceRepository.removeById(spaceId);
-	}
-
-	/**
-	 * 更新空间
-	 *
-	 * @param space 空间对象
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean updateSpace(Space space) {
-		return spaceRepository.updateById(space);
-	}
-
-	/**
-	 * 更新空间大小和数量
-	 *
-	 * @param updateWrapper 更新条件
-	 * @return 是否成功
-	 */
-	@Override
-	public Boolean updateSpaceSizeAndCount(LambdaUpdateWrapper<Space> updateWrapper) {
-		return spaceRepository.update(updateWrapper);
-	}
-
-	// endregion 增删改相关
-
-	// region 查询相关
-
-	/**
-	 * 根据空间 ID 获取空间信息
-	 *
-	 * @param spaceId 空间 ID
-	 * @return 空间信息
-	 */
-	@Override
-	public Space getSpaceById(Long spaceId) {
-		return spaceRepository.getById(spaceId);
-	}
-
-	/**
-	 * 获取用户空间列表
-	 *
-	 * @param lambdaQueryWrapper 查询条件
-	 * @return 空间列表
-	 */
-	@Override
-	public List<Space> getSpaceListAsUser(LambdaQueryWrapper<Space> lambdaQueryWrapper) {
-		return spaceRepository.list(lambdaQueryWrapper);
-	}
-
-	/**
-	 * 获取空间分页列表（管理员）
-	 *
-	 * @param page               分页对象
-	 * @param lambdaQueryWrapper 查询条件
-	 * @return 空间分页列表
-	 */
-	@Override
-	public Page<Space> getSpacePageListAsAdmin(Page<Space> page, LambdaQueryWrapper<Space> lambdaQueryWrapper) {
-		return spaceRepository.page(page, lambdaQueryWrapper);
-	}
-
-	// endregion 查询相关
+public class SpaceDomainServiceImpl extends ServiceImpl<SpaceRepository, Space> implements SpaceDomainService {
 
 	// region 其他相关
 
@@ -122,7 +34,7 @@ public class SpaceDomainServiceImpl implements SpaceDomainService {
 	 */
 	@Override
 	public Boolean existSpaceByUserIdAndSpaceType(Long userId, Integer spaceType) {
-		return spaceRepository.getBaseMapper().exists(new LambdaQueryWrapper<Space>()
+		return this.getBaseMapper().exists(new LambdaQueryWrapper<Space>()
 				.eq(Space::getUserId, userId)
 				.eq(Space::getSpaceType, spaceType)
 		);
@@ -136,7 +48,7 @@ public class SpaceDomainServiceImpl implements SpaceDomainService {
 	 */
 	@Override
 	public Boolean existSpaceById(Long spaceId) {
-		return spaceRepository.getBaseMapper().exists(new LambdaQueryWrapper<Space>().eq(Space::getId, spaceId));
+		return this.getBaseMapper().exists(new LambdaQueryWrapper<Space>().eq(Space::getId, spaceId));
 	}
 
 	/**
@@ -186,6 +98,92 @@ public class SpaceDomainServiceImpl implements SpaceDomainService {
 	}
 
 	// endregion 其他相关
+
+	// region 增删改相关
+
+	/**
+	 * 创建空间
+	 *
+	 * @param space 空间对象
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean addSpace(Space space) {
+		return this.save(space);
+	}
+
+	/**
+	 * 删除空间
+	 *
+	 * @param spaceId 空间ID
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean deleteSpace(Long spaceId) {
+		return this.removeById(spaceId);
+	}
+
+	/**
+	 * 更新空间
+	 *
+	 * @param space 空间对象
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean updateSpace(Space space) {
+		return this.updateById(space);
+	}
+
+	/**
+	 * 更新空间大小和数量
+	 *
+	 * @param updateWrapper 更新条件
+	 * @return 是否成功
+	 */
+	@Override
+	public Boolean updateSpaceSizeAndCount(LambdaUpdateWrapper<Space> updateWrapper) {
+		return this.update(updateWrapper);
+	}
+
+	// endregion 增删改相关
+
+	// region 查询相关
+
+	/**
+	 * 根据空间 ID 获取空间信息
+	 *
+	 * @param spaceId 空间 ID
+	 * @return 空间信息
+	 */
+	@Override
+	public Space getSpaceById(Long spaceId) {
+		return this.getById(spaceId);
+	}
+
+	/**
+	 * 获取用户空间列表
+	 *
+	 * @param lambdaQueryWrapper 查询条件
+	 * @return 空间列表
+	 */
+	@Override
+	public List<Space> getSpaceListAsUser(LambdaQueryWrapper<Space> lambdaQueryWrapper) {
+		return this.list(lambdaQueryWrapper);
+	}
+
+	/**
+	 * 获取空间管理分页列表
+	 *
+	 * @param page               分页对象
+	 * @param lambdaQueryWrapper 查询条件
+	 * @return 空间管理分页列表
+	 */
+	@Override
+	public Page<Space> getSpacePageListAsManage(Page<Space> page, LambdaQueryWrapper<Space> lambdaQueryWrapper) {
+		return this.page(page, lambdaQueryWrapper);
+	}
+
+	// endregion 查询相关
 }
 
 

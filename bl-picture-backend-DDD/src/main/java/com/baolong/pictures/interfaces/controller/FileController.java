@@ -1,12 +1,12 @@
 package com.baolong.pictures.interfaces.controller;
 
-import com.baolong.pictures.infrastructure.annotation.AuthCheck;
+import com.baolong.pictures.application.shared.auth.annotation.AuthCheck;
 import com.baolong.pictures.infrastructure.common.BaseResponse;
 import com.baolong.pictures.infrastructure.common.ResultUtils;
 import com.baolong.pictures.domain.user.constant.UserConstant;
 import com.baolong.pictures.infrastructure.exception.BusinessException;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
-import com.baolong.pictures.infrastructure.api.CosManager;
+import com.baolong.pictures.infrastructure.api.cos.CosManager;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;

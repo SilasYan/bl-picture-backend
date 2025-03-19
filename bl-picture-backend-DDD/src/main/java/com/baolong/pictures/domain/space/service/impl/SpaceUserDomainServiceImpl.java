@@ -11,18 +11,16 @@ import com.baolong.pictures.infrastructure.utils.SFLambdaUtil;
 import com.baolong.pictures.interfaces.dto.space.SpaceUserQueryRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 空间用户领域服务实现
+ * 空间用户表 (space_user) - 领域服务实现
  */
 @Service
-public class SpaceUserDomainServiceImpl implements SpaceUserDomainService {
-	@Resource
-	private SpaceUserRepository spaceUserRepository;
+public class SpaceUserDomainServiceImpl extends ServiceImpl<SpaceUserRepository, SpaceUser> implements SpaceUserDomainService {
 
 	// region 增删改相关
 
@@ -34,7 +32,7 @@ public class SpaceUserDomainServiceImpl implements SpaceUserDomainService {
 	 */
 	@Override
 	public Boolean addSpaceUserToSpace(SpaceUser spaceUser) {
-		return spaceUserRepository.save(spaceUser);
+		return this.save(spaceUser);
 	}
 
 	/**
@@ -45,7 +43,7 @@ public class SpaceUserDomainServiceImpl implements SpaceUserDomainService {
 	 */
 	@Override
 	public Boolean editSpaceUserAuth(SpaceUser spaceUser) {
-		return spaceUserRepository.updateById(spaceUser);
+		return this.updateById(spaceUser);
 	}
 
 	/**
@@ -56,7 +54,7 @@ public class SpaceUserDomainServiceImpl implements SpaceUserDomainService {
 	 */
 	@Override
 	public Boolean deleteSpaceUser(Long spaceUserId) {
-		return spaceUserRepository.removeById(spaceUserId);
+		return this.removeById(spaceUserId);
 	}
 
 	// endregion 增删改相关
@@ -71,7 +69,7 @@ public class SpaceUserDomainServiceImpl implements SpaceUserDomainService {
 	 */
 	@Override
 	public SpaceUser getSpaceUserById(Long spaceUserId) {
-		return spaceUserRepository.getById(spaceUserId);
+		return this.getById(spaceUserId);
 	}
 
 	/**
@@ -83,7 +81,7 @@ public class SpaceUserDomainServiceImpl implements SpaceUserDomainService {
 	 */
 	@Override
 	public SpaceUser getSpaceUserBySpaceIdAndUserId(Long spaceId, Long userId) {
-		return spaceUserRepository.getOne(new LambdaQueryWrapper<SpaceUser>()
+		return this.getOne(new LambdaQueryWrapper<SpaceUser>()
 				.eq(SpaceUser::getSpaceId, spaceId).eq(SpaceUser::getUserId, userId)
 		);
 	}
@@ -97,7 +95,7 @@ public class SpaceUserDomainServiceImpl implements SpaceUserDomainService {
 	 */
 	@Override
 	public Page<SpaceUser> getSpaceUserPageListBySpaceId(Page<SpaceUser> page, LambdaQueryWrapper<SpaceUser> lambdaQueryWrapper) {
-		return spaceUserRepository.page(page, lambdaQueryWrapper);
+		return this.page(page, lambdaQueryWrapper);
 	}
 
 	// endregion 查询相关

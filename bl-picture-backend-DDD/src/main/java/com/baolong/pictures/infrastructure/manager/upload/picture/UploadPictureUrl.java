@@ -42,7 +42,7 @@ public class UploadPictureUrl extends UploadPicture {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片文件地址错误");
 		}
 		// 校验 URL 协议
-		if (!fileUrl.startsWith("http://") || !fileUrl.startsWith("https://")) {
+		if (!(fileUrl.startsWith("http://") || fileUrl.startsWith("https://"))) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR, "仅支持 HTTP 或 HTTPS 协议的文件地址");
 		}
 		// 校验 URL 是否存在
@@ -114,7 +114,7 @@ public class UploadPictureUrl extends UploadPicture {
 	@Override
 	protected String getFileSuffix(Object fileInputSource) {
 		String fileUrl = (String) fileInputSource;
-		return FileUtil.mainName(fileUrl) + "." + FileUtil.extName(fileUrl);
+		return FileUtil.mainName(fileUrl).substring(0, 2) + "." + FileUtil.extName(fileUrl).split("&")[0];
 	}
 
 	/**

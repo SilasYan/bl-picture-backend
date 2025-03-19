@@ -1,6 +1,6 @@
 package com.baolong.pictures.application.shared.websocket.model;
 
-import com.baolong.pictures.interfaces.vo.user.UserVO;
+import com.baolong.pictures.interfaces.vo.user.UserDetailVO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,10 +31,10 @@ public class PictureEditResponseMessage {
     /**
      * 用户信息
      */
-    private UserVO user;
+    private UserDetailVO user;
 
     /**
      * 当前编辑的用户
      */
-    private UserVO inUser;
+    private UserDetailVO inUser;
 }

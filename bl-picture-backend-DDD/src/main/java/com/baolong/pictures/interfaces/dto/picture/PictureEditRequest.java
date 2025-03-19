@@ -29,17 +29,12 @@ public class PictureEditRequest implements Serializable {
 	/**
 	 * 分类 ID
 	 */
-	private Long category;
+	private Long categoryId;
 
 	/**
-	 * 标签 ID 列表
+	 * 标签列表
 	 */
-	private List<Long> tags;
-
-	/**
-	 * 输入的标签列表
-	 */
-	private List<String> inputTagList;
+	private List<String> tags;
 
 	/**
 	 * 空间 ID

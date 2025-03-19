@@ -7,6 +7,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baolong.pictures.domain.user.enums.UserRoleEnum;
 import com.baolong.pictures.infrastructure.exception.BusinessException;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -105,18 +106,24 @@ public class User implements Serializable {
 	private String shareCode;
 
 	/**
-	 * 邀请用户
+	 * 邀请用户 ID
 	 */
-	private Long inviteUser;
+	private Long inviteUserId;
 
 	/**
-	 * 是否删除
+	 * 是否禁用（0-正常, 1-禁用）
+	 */
+	private Integer isDisabled;
+
+	/**
+	 * 是否删除（0-正常, 1-删除）
 	 */
 	private Integer isDelete;
 
 	/**
 	 * 编辑时间
 	 */
+	@TableField(value = "edit_time", fill = FieldFill.UPDATE)
 	private Date editTime;
 
 	/**
@@ -184,7 +191,7 @@ public class User implements Serializable {
 		this.setUserAccount("user_" + random);
 		this.setUserName("用户_" + random);
 		this.setUserRole(UserRoleEnum.USER.getKey());
-		this.setUserPassword(this.getEncryptPassword("12345678"));
+		this.setUserPassword(getEncryptPassword("12345678"));
 	}
 
 	/**
@@ -193,7 +200,7 @@ public class User implements Serializable {
 	 * @param userPassword 用户密码
 	 * @return 加密后的密码
 	 */
-	public String getEncryptPassword(String userPassword) {
+	public static String getEncryptPassword(String userPassword) {
 		final String SALT = "baolong";
 		return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
 	}
@@ -204,7 +211,7 @@ public class User implements Serializable {
 	 * @return 是否为管理员
 	 */
 	public Boolean isAdmin() {
-		return UserRoleEnum.ADMIN.getKey().equals(this.getUserRole());
+		return UserRoleEnum.isAdmin(this.getUserRole());
 	}
 
 	// endregion 行为

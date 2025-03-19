@@ -46,7 +46,7 @@ public class LimitAspect {
 		List<Object> keys = Collections.singletonList(combineKey);
 		Long number = redisTemplate.execute(limitScript, keys, count, time);
 		if (number == null || number.intValue() > count) {
-			throw new BusinessException(ErrorCode.REQUEST_LIMIT_ERROR);
+			throw new BusinessException(ErrorCode.REQUEST_LIMIT_ERROR, limit.errMsg());
 		}
 		log.info("[限流]当前 {}/{} 次请求, 限流 KEY: [{}]", number.intValue(), count, combineKey);
 	}

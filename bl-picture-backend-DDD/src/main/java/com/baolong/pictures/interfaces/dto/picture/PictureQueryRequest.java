@@ -62,7 +62,7 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
 	/**
 	 * 分类 ID
 	 */
-	private Long category;
+	private Long categoryId;
 
 	/**
 	 * 标签（只能传一个）
@@ -95,12 +95,22 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
 	private Long reviewerUser;
 
 	/**
-	 * 开始编辑时间
+	 * 上传时间[开始时间]
+	 */
+	private Date startCreateTime;
+
+	/**
+	 * 上传时间[结束时间]
+	 */
+	private Date endCreateTime;
+
+	/**
+	 * 编辑时间[开始时间]
 	 */
 	private Date startEditTime;
 
 	/**
-	 * 结束编辑时间
+	 * 编辑时间[结束时间]
 	 */
 	private Date endEditTime;
 

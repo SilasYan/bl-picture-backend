@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.baolong</groupId>
-    <artifactId>bl-tePicture-backend-DDD</artifactId>
+    <artifactId>bl-picture-backend-DDD</artifactId>
     <version>0.0.2-SNAPSHOT</version>
     <name>bl-tePicture-backend</name>
     <description>bl-tePicture-backend</description>
@@ -39,6 +39,7 @@
             <version>3.4.2</version>
         </dependency>
 
+        <!-- Swagger 增强 -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi2-spring-boot-starter</artifactId>
@@ -129,6 +130,12 @@
             <artifactId>sa-token-redis-jackson</artifactId>
             <version>1.39.0</version>
         </dependency>
+        <!-- Sa-Token 整合 jwt -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-jwt</artifactId>
+            <version>1.39.0</version>
+        </dependency>
         <!-- 提供Redis连接池 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -179,7 +186,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>com.baolong.tePicture.BlPictureBackendApplication</mainClass>
+                    <mainClass>com.baolong.pictures.PicturesApplication</mainClass>
                     <!-- 这里需要注释, 因为打包会忽略主类 -->
                     <!--<skip>true</skip>-->
                 </configuration>

@@ -10,9 +10,11 @@ import com.baolong.pictures.interfaces.dto.user.UserQueryRequest;
 import com.baolong.pictures.interfaces.dto.user.UserRegisterRequest;
 import com.baolong.pictures.interfaces.dto.user.UserUpdateRequest;
 import com.baolong.pictures.interfaces.vo.user.LoginUserVO;
+import com.baolong.pictures.interfaces.vo.user.UserDetailVO;
 import com.baolong.pictures.interfaces.vo.user.UserVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
@@ -21,6 +23,26 @@ import java.util.Set;
  * 用户应用服务接口
  */
 public interface UserApplicationService {
+
+	// region 其他方法
+
+	/**
+	 * 获取查询条件对象
+	 *
+	 * @param userQueryRequest 用户查询请求
+	 * @return 查询条件对象
+	 */
+	QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
+
+	/**
+	 * 获取查询条件对象（Lambda）
+	 *
+	 * @param userQueryRequest 用户查询请求
+	 * @return 查询条件对象（Lambda）
+	 */
+	LambdaQueryWrapper<User> getLambdaQueryWrapper(UserQueryRequest userQueryRequest);
+
+	// endregion 其他方法
 
 	// region 登录注册
 
@@ -91,6 +113,30 @@ public interface UserApplicationService {
 	 */
 	Boolean editUser(UserEditRequest userEditRequest);
 
+	/**
+	 * 上传头像
+	 *
+	 * @param avatarFile 头像文件
+	 * @return 头像地址
+	 */
+	String uploadAvatar(MultipartFile avatarFile);
+
+	/**
+	 * 重置用户密码
+	 *
+	 * @param userUpdateRequest 用户更新请求
+	 * @return 重置后的密码
+	 */
+	String resetPassword(UserUpdateRequest userUpdateRequest);
+
+	/**
+	 * 禁用用户
+	 *
+	 * @param userUpdateRequest 用户更新请求
+	 * @return 是否成功
+	 */
+	Boolean disabledUser(UserUpdateRequest userUpdateRequest);
+
 	// endregion 增删改相关
 
 	// region 查询相关
@@ -123,15 +169,15 @@ public interface UserApplicationService {
 	 * @param userId 用户 ID
 	 * @return 用户详情
 	 */
-	UserVO getUserDetailById(Long userId);
+	UserDetailVO getUserDetailById(Long userId);
 
 	/**
-	 * 获取用户分页列表（管理员）
+	 * 获取用户管理分页列表
 	 *
 	 * @param userQueryRequest 用户查询请求
-	 * @return 用户分页列表
+	 * @return 用户管理分页列表
 	 */
-	PageVO<User> getUserPageListAsAdmin(UserQueryRequest userQueryRequest);
+	PageVO<UserVO> getUserPageListAsManage(UserQueryRequest userQueryRequest);
 
 	/**
 	 * 根据用户 ID 集合获取用户列表
@@ -142,26 +188,6 @@ public interface UserApplicationService {
 	List<User> getUserListByIds(Set<Long> userIds);
 
 	// endregion 查询相关
-
-	// region 其他方法
-
-	/**
-	 * 获取查询条件对象
-	 *
-	 * @param userQueryRequest 用户查询请求
-	 * @return 查询条件对象
-	 */
-	QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
-
-	/**
-	 * 获取查询条件对象（Lambda）
-	 *
-	 * @param userQueryRequest 用户查询请求
-	 * @return 查询条件对象（Lambda）
-	 */
-	LambdaQueryWrapper<User> getLambdaQueryWrapper(UserQueryRequest userQueryRequest);
-
-	// endregion 其他方法
 
 	//
 	// /**

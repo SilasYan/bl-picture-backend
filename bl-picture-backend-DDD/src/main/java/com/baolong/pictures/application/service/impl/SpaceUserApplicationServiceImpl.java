@@ -131,7 +131,7 @@ public class SpaceUserApplicationServiceImpl implements SpaceUserApplicationServ
 		spaceUserVO.forEach(spaceUser -> {
 			Long userId = spaceUser.getUserId();
 			User user = userListMap.get(userId).get(0);
-			spaceUser.setUser(UserAssembler.toUserVO(user));
+			spaceUser.setUser(UserAssembler.toUserDetailVO(user));
 		});
 		return new PageVO<>(spaceUserPage.getCurrent()
 				, spaceUserPage.getSize()

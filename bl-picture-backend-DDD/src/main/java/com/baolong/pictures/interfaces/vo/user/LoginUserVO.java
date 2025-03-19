@@ -4,9 +4,10 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
- * 登录用户信息
+ * 登录用户 VO
  */
 @Data
 public class LoginUserVO implements Serializable {
@@ -15,6 +16,11 @@ public class LoginUserVO implements Serializable {
 	 * 用户 ID
 	 */
 	private Long id;
+
+	/**
+	 * token
+	 */
+	private String token;
 
 	/**
 	 * 账号
@@ -77,14 +83,29 @@ public class LoginUserVO implements Serializable {
 	private String shareCode;
 
 	/**
-	 * 邀请用户
+	 * 邀请用户 ID
 	 */
-	private Long inviteUser;
+	private Long inviteUserId;
 
 	/**
 	 * 创建时间
 	 */
 	private Date createTime;
+
+	/**
+	 * 顶部菜单列表
+	 */
+	private List<String> topMenus;
+
+	/**
+	 * 左侧菜单列表
+	 */
+	private List<String> leftMenus;
+
+	/**
+	 * 其他菜单列表
+	 */
+	private List<String> otherMenus;
 
 	private static final long serialVersionUID = 1L;
 }

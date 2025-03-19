@@ -5,7 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baolong.pictures.application.service.CategoryApplicationService;
 import com.baolong.pictures.domain.category.entity.Category;
 import com.baolong.pictures.domain.user.constant.UserConstant;
-import com.baolong.pictures.infrastructure.annotation.AuthCheck;
+import com.baolong.pictures.application.shared.auth.annotation.AuthCheck;
 import com.baolong.pictures.infrastructure.common.BaseResponse;
 import com.baolong.pictures.infrastructure.common.DeleteRequest;
 import com.baolong.pictures.infrastructure.common.ResultUtils;
@@ -81,18 +81,18 @@ public class CategoryController {
 	/**
 	 * 获取首页分类列表
 	 */
-	@GetMapping("/list")
-	public BaseResponse<List<CategoryVO>> getCategoryListAsUser() {
-		return ResultUtils.success(categoryApplicationService.getCategoryListAsUser());
+	@GetMapping("/home/list")
+	public BaseResponse<List<CategoryVO>> getCategoryListAsHome() {
+		return ResultUtils.success(categoryApplicationService.getCategoryListAsHome());
 	}
 
 	/**
-	 * 获取分类分页列表（管理员）
+	 * 获取图片管理分页列表
 	 */
-	@GetMapping("/admin/list")
+	@PostMapping("/manage/page")
 	@AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-	public BaseResponse<PageVO<Category>> getCategoryPageListAsAdmin(CategoryQueryRequest categoryQueryRequest) {
-		return ResultUtils.success(categoryApplicationService.getCategoryPageListAsAdmin(categoryQueryRequest));
+	public BaseResponse<PageVO<Category>> getCategoryPageListAsManage(@RequestBody CategoryQueryRequest categoryQueryRequest) {
+		return ResultUtils.success(categoryApplicationService.getCategoryPageListAsManage(categoryQueryRequest));
 	}
 
 	// endregion 查询相关

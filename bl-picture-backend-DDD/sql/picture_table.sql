@@ -2,7 +2,7 @@ CREATE DATABASE IF NOT EXISTS baolong_platform DEFAULT CHARACTER SET utf8mb4 COL
 USE baolong_platform;
 
 -- 用户表
-CREATE TABLE IF NOT EXISTS TUser
+CREATE TABLE IF NOT EXISTS user
 (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     user_account    VARCHAR(50)     NOT NULL COMMENT '账号',
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS TUser
     vip_sign        VARCHAR(20)              DEFAULT NULL COMMENT '会员标识（vip 表的类型字段）',
     share_code      VARCHAR(20)              DEFAULT NULL COMMENT '分享码',
     invite_user     BIGINT                   DEFAULT NULL COMMENT '邀请用户',
-    is_delete       TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除',
+    is_delete       TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
     edit_time       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
     create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS TUser
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '用户表';
+ALTER TABLE baolong_picture.user
+    ADD COLUMN is_disabled TINYINT NOT NULL DEFAULT 0 COMMENT '是否禁用（0-正常, 1-禁用）' AFTER share_code;
 
 
 -- 会员表
@@ -46,7 +48,7 @@ CREATE TABLE IF NOT EXISTS vip
     used_user   BIGINT                   DEFAULT NULL COMMENT '使用用户 ID',
     used_time   DATETIME                 DEFAULT NULL COMMENT '使用时间',
     user_id     BIGINT          NOT NULL COMMENT '创建用户 ID',
-    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除',
+    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
     edit_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
     create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -57,7 +59,6 @@ CREATE TABLE IF NOT EXISTS vip
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '会员表';
-
 
 -- 图片表
 CREATE TABLE IF NOT EXISTS tePicture
@@ -85,7 +86,7 @@ CREATE TABLE IF NOT EXISTS tePicture
     review_message  VARCHAR(256)             DEFAULT NULL COMMENT '审核信息',
     reviewer_user   BIGINT                   DEFAULT NULL COMMENT '审核人 ID',
     review_time     DATETIME                 DEFAULT NULL COMMENT '审核时间',
-    is_delete       TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除',
+    is_delete       TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
     edit_time       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
     create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -103,6 +104,30 @@ CREATE TABLE IF NOT EXISTS tePicture
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '图片表';
 
+ALTER TABLE baolong_picture.picture
+    ADD COLUMN view_quantity     INT     NOT NULL DEFAULT 0 COMMENT '查看数量' AFTER review_time,
+    ADD COLUMN like_quantity     INT     NOT NULL DEFAULT 0 COMMENT '点赞数量' AFTER view_quantity,
+    ADD COLUMN collect_quantity  INT     NOT NULL DEFAULT 0 COMMENT '收藏数量' AFTER like_quantity,
+    ADD COLUMN download_quantity INT     NOT NULL DEFAULT 0 COMMENT '下载数量' AFTER collect_quantity,
+    ADD COLUMN share_quantity    INT     NOT NULL DEFAULT 0 COMMENT '分享数量' AFTER download_quantity,
+    ADD COLUMN is_share          TINYINT NOT NULL DEFAULT 0 COMMENT '是否分享（0-分享, 1-不分享）' AFTER share_quantity;
+
+-- 图片交互表
+CREATE TABLE IF NOT EXISTS picture_interaction
+(
+    user_id            BIGINT   NOT NULL COMMENT '用户 ID',
+    picture_id         BIGINT   NOT NULL COMMENT '图片 ID',
+    interaction_type   TINYINT  NOT NULL COMMENT '交互类型（0-点赞, 1-收藏）',
+    interaction_status TINYINT  NOT NULL COMMENT '交互状态（0-存在, 1-取消）',
+    is_delete          TINYINT  NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
+    edit_time          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
+    create_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (user_id, picture_id, interaction_type)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT = '图片交互表';
+
 -- 分类表
 CREATE TABLE IF NOT EXISTS category
 (
@@ -111,7 +136,7 @@ CREATE TABLE IF NOT EXISTS category
     parent_id   BIGINT UNSIGNED          DEFAULT 0 COMMENT '父分类 ID（0-表示顶层分类）',
     use_num     INT                      DEFAULT 0 NOT NULL COMMENT '使用数量',
     user_id     BIGINT          NOT NULL COMMENT '创建用户 ID',
-    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除',
+    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
     edit_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
     create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -128,7 +153,7 @@ CREATE TABLE IF NOT EXISTS tag
     name        VARCHAR(128)    NOT NULL COMMENT '名称',
     use_num     INT             NOT NULL DEFAULT 0 COMMENT '使用数量',
     user_id     BIGINT          NOT NULL COMMENT '创建用户 ID',
-    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除',
+    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
     edit_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
     create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -151,7 +176,7 @@ CREATE TABLE IF NOT EXISTS teSpace
     used_size   BIGINT          NOT NULL DEFAULT 0 COMMENT '空间使用大小（单位: KB）',
     used_count  BIGINT          NOT NULL DEFAULT 0 COMMENT '空间使用数量（单位: 张）',
     user_id     BIGINT          NOT NULL COMMENT '创建用户 ID',
-    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除',
+    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
     edit_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
     create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -171,7 +196,7 @@ CREATE TABLE IF NOT EXISTS space_user
     space_id    BIGINT          NOT NULL COMMENT '空间 ID',
     user_id     BIGINT          NOT NULL COMMENT '用户 ID',
     space_role  VARCHAR(20)              DEFAULT 'viewer' NULL COMMENT '空间角色（admin-管理员, editor-编辑者, viewer-访问）',
-    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除',
+    is_delete   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
     edit_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
     create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -222,3 +247,48 @@ CREATE TABLE request_log
   COLLATE = utf8mb4_unicode_ci COMMENT = '请求日志表';
 
 
+-- 菜单表
+CREATE TABLE menu
+(
+    id            BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键',
+    menu_name     VARCHAR(50) NOT NULL COMMENT '菜单名称',
+    menu_position TINYINT     NOT NULL COMMENT '菜单位置（1-顶部, 2-左侧, 3-其他）',
+    menu_path     VARCHAR(255)         DEFAULT NULL COMMENT '路由路径（vue-router path）',
+    menu_type     TINYINT     NOT NULL COMMENT '类型（1-菜单, 2-按钮）',
+    parent_id     BIGINT      NOT NULL DEFAULT 0 COMMENT '父菜单 ID',
+    is_disabled   TINYINT     NOT NULL DEFAULT 0 COMMENT '是否禁用（0-正常, 1-禁用）',
+    is_delete     TINYINT     NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
+    edit_time     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
+    create_time   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id)
+) COMMENT = '菜单表';
+
+
+-- 角色表
+CREATE TABLE role
+(
+    id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键',
+    role_name   VARCHAR(20) NOT NULL COMMENT '角色名称',
+    role_key    VARCHAR(20) NOT NULL COMMENT '角色标识',
+    is_delete   TINYINT     NOT NULL DEFAULT 0 COMMENT '是否删除（0-正常, 1-删除）',
+    edit_time   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
+    create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_role_key (role_key)
+) COMMENT = '角色表';
+
+-- 角色-菜单关联表
+CREATE TABLE role_menu
+(
+    role_key VARCHAR(20) NOT NULL,
+    menu_id  BIGINT      NOT NULL,
+    PRIMARY KEY (role_key, menu_id)
+) COMMENT = '角色菜单关联表';
+
+
+-- 角色数据
+INSERT INTO role(role_name, role_key)
+VALUES ('管理员', 'ADMIN'),
+       ('普通用户', 'USER');

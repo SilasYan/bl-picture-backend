@@ -6,7 +6,8 @@ import com.baolong.pictures.interfaces.dto.picture.PictureEditRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureReviewRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUpdateRequest;
 import com.baolong.pictures.interfaces.dto.picture.PictureUploadRequest;
-import com.baolong.pictures.interfaces.vo.picture.PictureSimpleVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureDetailVO;
+import com.baolong.pictures.interfaces.vo.picture.PictureHomeVO;
 import com.baolong.pictures.interfaces.vo.picture.PictureVO;
 import org.springframework.beans.BeanUtils;
 
@@ -28,7 +29,9 @@ public class PictureAssembler {
 	 */
 	public static Picture toPictureEntity(PictureUploadRequest pictureUploadRequest) {
 		Picture picture = new Picture();
-		BeanUtils.copyProperties(pictureUploadRequest, picture);
+		if (pictureUploadRequest != null) {
+			BeanUtils.copyProperties(pictureUploadRequest, picture);
+		}
 		return picture;
 	}
 
@@ -37,7 +40,9 @@ public class PictureAssembler {
 	 */
 	public static Picture toPictureEntity(PictureUpdateRequest pictureUpdateRequest) {
 		Picture picture = new Picture();
-		BeanUtils.copyProperties(pictureUpdateRequest, picture);
+		if (pictureUpdateRequest != null) {
+			BeanUtils.copyProperties(pictureUpdateRequest, picture);
+		}
 		return picture;
 	}
 
@@ -46,7 +51,9 @@ public class PictureAssembler {
 	 */
 	public static Picture toPictureEntity(PictureEditRequest pictureEditRequest) {
 		Picture picture = new Picture();
-		BeanUtils.copyProperties(pictureEditRequest, picture);
+		if (pictureEditRequest != null) {
+			BeanUtils.copyProperties(pictureEditRequest, picture);
+		}
 		return picture;
 	}
 
@@ -55,22 +62,24 @@ public class PictureAssembler {
 	 */
 	public static List<Picture> toPictureEntityList(PictureReviewRequest pictureReviewRequest) {
 		List<Picture> pictures = new ArrayList<>();
-		if (pictureReviewRequest.getId() == null) {
-			for (Long id : pictureReviewRequest.getIdList()) {
+		if (pictureReviewRequest != null) {
+			if (pictureReviewRequest.getId() == null) {
+				for (Long id : pictureReviewRequest.getIdList()) {
+					Picture picture = new Picture();
+					picture.setId(id);
+					picture.setReviewStatus(pictureReviewRequest.getReviewStatus());
+					picture.setReviewMessage(pictureReviewRequest.getReviewMessage());
+					picture.setReviewTime(new Date());
+					pictures.add(picture);
+				}
+			} else {
 				Picture picture = new Picture();
-				picture.setId(id);
+				picture.setId(pictureReviewRequest.getId());
 				picture.setReviewStatus(pictureReviewRequest.getReviewStatus());
 				picture.setReviewMessage(pictureReviewRequest.getReviewMessage());
 				picture.setReviewTime(new Date());
 				pictures.add(picture);
 			}
-		} else {
-			Picture picture = new Picture();
-			picture.setId(pictureReviewRequest.getId());
-			picture.setReviewStatus(pictureReviewRequest.getReviewStatus());
-			picture.setReviewMessage(pictureReviewRequest.getReviewMessage());
-			picture.setReviewTime(new Date());
-			pictures.add(picture);
 		}
 		return pictures;
 	}
@@ -80,13 +89,15 @@ public class PictureAssembler {
 	 */
 	public static List<Picture> toPictureEntityList(PictureBatchEditRequest pictureBatchEditRequest) {
 		List<Picture> pictures = new ArrayList<>();
-		for (Long id : pictureBatchEditRequest.getIdList()) {
-			Picture picture = new Picture();
-			picture.setId(id);
-			picture.setCategory(pictureBatchEditRequest.getCategory());
-			picture.setSpaceId(pictureBatchEditRequest.getSpaceId());
-			pictures.add(picture);
-			pictures.add(picture);
+		if (pictureBatchEditRequest != null) {
+			for (Long id : pictureBatchEditRequest.getIdList()) {
+				Picture picture = new Picture();
+				picture.setId(id);
+				picture.setCategoryId(pictureBatchEditRequest.getCategoryId());
+				picture.setSpaceId(pictureBatchEditRequest.getSpaceId());
+				pictures.add(picture);
+				pictures.add(picture);
+			}
 		}
 		return pictures;
 	}
@@ -96,16 +107,42 @@ public class PictureAssembler {
 	 */
 	public static PictureVO toPictureVO(Picture picture) {
 		PictureVO pictureVO = new PictureVO();
-		BeanUtils.copyProperties(picture, pictureVO);
+		if (picture != null) {
+			BeanUtils.copyProperties(picture, pictureVO);
+		}
 		return pictureVO;
 	}
 
 	/**
-	 * 图片实体 转为 图片简单 VO
+	 * 图片实体 转为 图片详情 VO
 	 */
-	public static PictureSimpleVO toPictureSimpleVO(Picture picture) {
-		PictureSimpleVO pictureSimpleVO = new PictureSimpleVO();
-		BeanUtils.copyProperties(picture, pictureSimpleVO);
-		return pictureSimpleVO;
+	public static PictureDetailVO toPictureDetailVO(Picture picture) {
+		PictureDetailVO pictureDetailVO = new PictureDetailVO();
+		if (picture != null) {
+			BeanUtils.copyProperties(picture, pictureDetailVO);
+		}
+		return pictureDetailVO;
+	}
+
+	/**
+	 * 图片实体 转为 图片首页 VO
+	 */
+	public static PictureHomeVO toPictureSimpleVO(Picture picture) {
+		PictureHomeVO PictureHomeVO = new PictureHomeVO();
+		if (picture != null) {
+			BeanUtils.copyProperties(picture, PictureHomeVO);
+		}
+		return PictureHomeVO;
+	}
+
+	/**
+	 * 图片首页 VO 转为 图片详情 VO
+	 */
+	public static PictureDetailVO toPictureDetailVO(PictureHomeVO PictureHomeVO) {
+		PictureDetailVO pictureDetailVO = new PictureDetailVO();
+		if (PictureHomeVO != null) {
+			BeanUtils.copyProperties(PictureHomeVO, pictureDetailVO);
+		}
+		return pictureDetailVO;
 	}
 }

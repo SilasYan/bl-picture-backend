@@ -19,7 +19,7 @@ public class PictureBatchEditRequest implements Serializable {
 	/**
 	 * 分类 ID
 	 */
-	private Long category;
+	private Long categoryId;
 
 	/**
 	 * 标签 ID 列表

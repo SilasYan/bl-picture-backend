@@ -40,7 +40,7 @@ public class UploadPictureFile extends UploadPicture {
 	 * 处理文件输入源
 	 *
 	 * @param fileInputSource 文件输入源
-	 * @param file        文件对象
+	 * @param file            文件对象
 	 */
 	@Override
 	protected void handleFile(Object fileInputSource, File file) {
@@ -92,7 +92,8 @@ public class UploadPictureFile extends UploadPicture {
 	 */
 	@Override
 	protected String getFileSuffix(Object fileInputSource) {
-		return FileUtil.getSuffix(((MultipartFile) fileInputSource).getOriginalFilename());
+		MultipartFile multipartFile = (MultipartFile) fileInputSource;
+		return FileUtil.getSuffix(multipartFile.getOriginalFilename());
 	}
 
 	/**
@@ -103,6 +104,7 @@ public class UploadPictureFile extends UploadPicture {
 	 */
 	@Override
 	protected String getFileNameWithoutSuffix(Object fileInputSource) {
-		return FileUtil.mainName(((MultipartFile) fileInputSource).getOriginalFilename());
+		MultipartFile multipartFile = (MultipartFile) fileInputSource;
+		return FileUtil.mainName(multipartFile.getOriginalFilename());
 	}
 }

@@ -74,6 +74,10 @@ spring:
 sa-token:
   # token 名称（同时也是 cookie 名称）
   token-name: token
+  # token 前缀
+  token-prefix: Bearer
+  # jwt秘钥
+  jwt-secret-key: baolong_picture
   # token 有效期（单位：秒） 默认30天，-1 代表永久有效
   timeout: 2592000
   # token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
@@ -85,7 +89,7 @@ sa-token:
   # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
   token-style: uuid
   # 是否输出操作日志
-  is-log: false
+  is-log: true
 
 
 # MyBatisPlus 配置
@@ -97,7 +101,7 @@ mybatis-plus:
     log-impl: ${mybatis-plus.log-impl}
   global-config:
     db-config:
-      logic-delete-field: is_delete # 全局逻辑删除的实体字段名
+      logic-delete-field: isDelete # 全局逻辑删除的实体字段名
       logic-delete-value: 1 # 逻辑已删除值（默认为 1）
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
       table-underline: true # 表名是否使用下划线命名

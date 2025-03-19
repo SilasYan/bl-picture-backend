@@ -5,7 +5,6 @@ import cn.hutool.core.util.StrUtil;
 import com.baolong.pictures.application.service.PictureApplicationService;
 import com.baolong.pictures.application.service.SpaceApplicationService;
 import com.baolong.pictures.application.service.UserApplicationService;
-import com.baolong.pictures.application.shared.auth.SpaceUserAuthManager;
 import com.baolong.pictures.domain.picture.entity.Picture;
 import com.baolong.pictures.domain.space.entity.Space;
 import com.baolong.pictures.domain.space.enums.SpaceTypeEnum;
@@ -38,8 +37,8 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
 	@Resource
 	private SpaceApplicationService spaceApplicationService;
 
-	@Resource
-	private SpaceUserAuthManager spaceUserAuthManager;
+	// @Resource
+	// private SpaceUserAuthManager spaceUserAuthManager;
 
 	@Override
 	public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) {

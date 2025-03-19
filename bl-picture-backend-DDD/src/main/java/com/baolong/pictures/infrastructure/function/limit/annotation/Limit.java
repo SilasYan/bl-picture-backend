@@ -40,4 +40,6 @@ public @interface Limit {
 	 * 限制类型
 	 */
 	LimitType limitType() default LimitType.DEFAULT;
+
+	String errMsg() default "请求过于频繁，请稍后再试";
 }

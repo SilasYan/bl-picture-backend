@@ -5,8 +5,8 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baolong.pictures.infrastructure.api.CosManager;
-import com.baolong.pictures.infrastructure.config.CosClientConfig;
+import com.baolong.pictures.infrastructure.api.cos.CosManager;
+import com.baolong.pictures.infrastructure.api.cos.CosConfig;
 import com.baolong.pictures.infrastructure.exception.BusinessException;
 import com.baolong.pictures.infrastructure.exception.ErrorCode;
 import com.baolong.pictures.infrastructure.manager.upload.picture.model.UploadPictureResult;
@@ -35,7 +35,7 @@ public abstract class UploadPicture {
 	protected CosManager cosManager;
 
 	@Resource
-	protected CosClientConfig cosClientConfig;
+	protected CosConfig cosConfig;
 
 	/**
 	 * 允许上传的图片格式
@@ -59,9 +59,10 @@ public abstract class UploadPicture {
 	 *
 	 * @param fileInputSource 文件输入源
 	 * @param pathPrefix      路径前缀, 例如: images/100001/2025_03_08/
+	 * @param openWx          开启数据万象; true: 开启; false: 关闭
 	 * @return 返回对象
 	 */
-	public final UploadPictureResult uploadFile(Object fileInputSource, String pathPrefix) {
+	public final UploadPictureResult uploadFile(Object fileInputSource, String pathPrefix, boolean openWx) {
 		// 1. 校验文件
 		this.validFile(fileInputSource);
 		// 2. 获取文件后缀
@@ -70,12 +71,14 @@ public abstract class UploadPicture {
 		String uploadPath = String.format("%s%s.%s", pathPrefix, IdUtil.simpleUUID(), fileSuffix);
 		File file = null;
 		try {
+			// 获取原图名称, 不包含后缀
+			String originName = getFileNameWithoutSuffix(fileInputSource);
 			// 4. 创建临时文件
 			file = File.createTempFile(uploadPath, null);
 			// 5. 处理文件输入源
 			handleFile(fileInputSource, file);
 			// 6. 上传文件到对象存储服务  Tips: 后续可以改为多种存储
-			return uploadFileToStore(uploadPath, file);
+			return uploadFileToStore(uploadPath, originName, file, openWx);
 		} catch (Exception e) {
 			log.error("文件上传到对象存储失败", e);
 			throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件上传失败");
@@ -104,31 +107,35 @@ public abstract class UploadPicture {
 	 * 上传文件到存储服务
 	 *
 	 * @param uploadPath 上传路径
+	 * @param originName 原文件名称
 	 * @param file       文件对象
+	 * @param openWx     开启数据万象; true: 开启; false: 关闭
 	 * @return 图片上传结果
 	 */
-	protected UploadPictureResult uploadFileToStore(String uploadPath, File file) {
-		// 获取原图名称, 不包含后缀
-		String originName = getFileNameWithoutSuffix(file);
+	protected UploadPictureResult uploadFileToStore(String uploadPath, String originName, File file, boolean openWx) {
 		// 上传图片到对象存储
-		PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
+		PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file, openWx);
 		// 图片原图信息
 		ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
-		// 获取处理后的结果信息
-		ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
-		List<CIObject> objectList = processResults.getObjectList();
-		if (CollUtil.isEmpty(objectList)) {
-			return buildPictureResult(file, uploadPath, originName, imageInfo);
-		}
-		// 根据图片处理规则的顺序获取, 获取压缩图信息
-		CIObject compressedCiObject = objectList.get(0);
-		CIObject thumbnailCiObject = null;
-		if (objectList.size() > 1) {
-			// 获取压缩图信息
-			thumbnailCiObject = objectList.get(1);
-			return buildPictureResult(file, uploadPath, originName, imageInfo, compressedCiObject, thumbnailCiObject);
+		if (openWx) {
+			// 获取处理后的结果信息
+			ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
+			List<CIObject> objectList = processResults.getObjectList();
+			if (CollUtil.isEmpty(objectList)) {
+				return buildPictureResult(file, uploadPath, originName, imageInfo);
+			}
+			// 根据图片处理规则的顺序获取, 获取压缩图信息
+			CIObject compressedCiObject = objectList.get(0);
+			CIObject thumbnailCiObject = null;
+			if (objectList.size() > 1) {
+				// 获取压缩图信息
+				thumbnailCiObject = objectList.get(1);
+				return buildPictureResult(file, uploadPath, originName, imageInfo, compressedCiObject, thumbnailCiObject);
+			} else {
+				return buildPictureResult(file, uploadPath, originName, imageInfo, compressedCiObject);
+			}
 		} else {
-			return buildPictureResult(file, uploadPath, originName, imageInfo, compressedCiObject);
+			return buildPictureResult(file, uploadPath, originName, imageInfo);
 		}
 	}
 
@@ -202,7 +209,7 @@ public abstract class UploadPicture {
 	 */
 	private UploadPictureResult buildPictureResult(File file, String uploadPath, String originFilename
 			, ImageInfo imageInfo, CIObject compressedCiObject, CIObject thumbnailCiObject) {
-		String prefix = cosClientConfig.getHost() + "/";
+		String prefix = cosConfig.getHost() + "/";
 		UploadPictureResult uploadPictureResult = new UploadPictureResult();
 		uploadPictureResult.setOriginName(originFilename);
 		String originUrl = prefix + uploadPath;

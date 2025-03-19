@@ -4,11 +4,12 @@ import com.baolong.pictures.domain.space.entity.SpaceUser;
 import com.baolong.pictures.interfaces.dto.space.SpaceUserQueryRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
- * 空间用户领域服务接口
+ * 空间用户表 (space_user) - 领域服务接口
  */
-public interface SpaceUserDomainService {
+public interface SpaceUserDomainService extends IService<SpaceUser> {
 
 	// region 增删改相关
 

@@ -1,10 +1,12 @@
 package com.baolong.pictures.interfaces.assembler;
 
 import com.baolong.pictures.domain.space.entity.Space;
+import com.baolong.pictures.infrastructure.utils.StorageUtils;
 import com.baolong.pictures.interfaces.dto.space.SpaceActivateRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceAddRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceEditRequest;
 import com.baolong.pictures.interfaces.dto.space.SpaceUpdateRequest;
+import com.baolong.pictures.interfaces.vo.space.SpaceDetailVO;
 import com.baolong.pictures.interfaces.vo.space.SpaceVO;
 import org.springframework.beans.BeanUtils;
 
@@ -22,7 +24,9 @@ public class SpaceAssembler {
 	 */
 	public static Space toSpaceEntity(SpaceActivateRequest spaceActivateRequest) {
 		Space space = new Space();
-		BeanUtils.copyProperties(spaceActivateRequest, space);
+		if (spaceActivateRequest != null) {
+			BeanUtils.copyProperties(spaceActivateRequest, space);
+		}
 		return space;
 	}
 
@@ -31,7 +35,9 @@ public class SpaceAssembler {
 	 */
 	public static Space toSpaceEntity(SpaceAddRequest spaceAddRequest) {
 		Space space = new Space();
-		BeanUtils.copyProperties(spaceAddRequest, space);
+		if (spaceAddRequest != null) {
+			BeanUtils.copyProperties(spaceAddRequest, space);
+		}
 		return space;
 	}
 
@@ -40,7 +46,9 @@ public class SpaceAssembler {
 	 */
 	public static Space toSpaceEntity(SpaceUpdateRequest spaceUpdateRequest) {
 		Space space = new Space();
-		BeanUtils.copyProperties(spaceUpdateRequest, space);
+		if (spaceUpdateRequest != null) {
+			BeanUtils.copyProperties(spaceUpdateRequest, space);
+		}
 		return space;
 	}
 
@@ -49,8 +57,23 @@ public class SpaceAssembler {
 	 */
 	public static Space toSpaceEntity(SpaceEditRequest spaceEditRequest) {
 		Space space = new Space();
-		BeanUtils.copyProperties(spaceEditRequest, space);
+		if (spaceEditRequest != null) {
+			BeanUtils.copyProperties(spaceEditRequest, space);
+		}
 		return space;
+	}
+
+	/**
+	 * 空间实体 转为 空间详情 VO
+	 */
+	public static SpaceDetailVO toSpaceDetailVO(Space space) {
+		SpaceDetailVO spaceDetailVO = new SpaceDetailVO();
+		if (space != null) {
+			BeanUtils.copyProperties(space, spaceDetailVO);
+			spaceDetailVO.setMaxSizeUnit(StorageUtils.format(space.getMaxSize()));
+			spaceDetailVO.setUsedSizeUnit(StorageUtils.format(space.getUsedSize()));
+		}
+		return spaceDetailVO;
 	}
 
 	/**
@@ -58,7 +81,11 @@ public class SpaceAssembler {
 	 */
 	public static SpaceVO toSpaceVO(Space space) {
 		SpaceVO spaceVO = new SpaceVO();
-		BeanUtils.copyProperties(space, spaceVO);
+		if (space != null) {
+			BeanUtils.copyProperties(space, spaceVO);
+			spaceVO.setMaxSizeUnit(StorageUtils.format(space.getMaxSize()));
+			spaceVO.setUsedSizeUnit(StorageUtils.format(space.getUsedSize()));
+		}
 		return spaceVO;
 	}
 }

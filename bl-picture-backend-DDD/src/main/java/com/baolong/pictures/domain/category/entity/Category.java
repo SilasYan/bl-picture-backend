@@ -1,5 +1,6 @@
 package com.baolong.pictures.domain.category.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -54,6 +55,7 @@ public class Category implements Serializable {
 	/**
 	 * 编辑时间
 	 */
+	@TableField(value = "edit_time", fill = FieldFill.UPDATE)
 	private Date editTime;
 
 	/**

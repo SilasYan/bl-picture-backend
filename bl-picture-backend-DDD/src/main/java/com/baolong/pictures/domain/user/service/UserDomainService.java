@@ -5,14 +5,36 @@ import com.baolong.pictures.interfaces.dto.user.UserQueryRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
 
 /**
- * 用户领域服务接口
+ * 用户表 (user) - 领域服务接口
  */
-public interface UserDomainService {
+public interface UserDomainService extends IService<User> {
+
+	// region 其他方法
+
+	/**
+	 * 获取查询条件对象
+	 *
+	 * @param userQueryRequest 用户查询请求
+	 * @return 查询条件对象
+	 */
+	QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
+
+	/**
+	 * 获取查询条件对象（Lambda）
+	 *
+	 * @param userQueryRequest 用户查询请求
+	 * @return 查询条件对象（Lambda）
+	 */
+	LambdaQueryWrapper<User> getLambdaQueryWrapper(UserQueryRequest userQueryRequest);
+
+	// endregion 其他方法
 
 	// region 登录注册
 
@@ -88,6 +110,32 @@ public interface UserDomainService {
 	 */
 	Boolean editUser(User user);
 
+	/**
+	 * 上传头像
+	 *
+	 * @param avatarFile 头像文件
+	 * @param userId     用户ID
+	 * @return 头像地址
+	 */
+	String uploadAvatar(MultipartFile avatarFile, Long userId);
+
+	/**
+	 * 重置用户密码
+	 *
+	 * @param userId 用户密码
+	 * @return 重置后的密码
+	 */
+	String resetPassword(Long userId);
+
+	/**
+	 * 禁用用户
+	 *
+	 * @param userId     用户 ID
+	 * @param isDisabled 是否禁用
+	 * @return 是否成功
+	 */
+	Boolean disabledUser(Long userId, Integer isDisabled);
+
 	// endregion 增删改相关
 
 	// region 查询相关
@@ -108,13 +156,13 @@ public interface UserDomainService {
 	User getUserById(Long userId);
 
 	/**
-	 * 获取分页用户列表（管理员, 条件查询）
+	 * 获取用户管理分页列表
 	 *
 	 * @param page               分页对象
 	 * @param lambdaQueryWrapper 查询条件
-	 * @return 用户分页列表
+	 * @return 用户管理分页列表
 	 */
-	Page<User> getUserPageListAsAdmin(Page<User> page, LambdaQueryWrapper<User> lambdaQueryWrapper);
+	Page<User> getUserPageListAsManage(Page<User> page, LambdaQueryWrapper<User> lambdaQueryWrapper);
 
 	/**
 	 * 根据用户 ID 判断用户是否存在
@@ -141,26 +189,6 @@ public interface UserDomainService {
 	List<User> getUserListByIds(Set<Long> userIds);
 
 	// endregion 查询相关
-
-	// region 其他方法
-
-	/**
-	 * 获取查询条件对象
-	 *
-	 * @param userQueryRequest 用户查询请求
-	 * @return 查询条件对象
-	 */
-	QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
-
-	/**
-	 * 获取查询条件对象（Lambda）
-	 *
-	 * @param userQueryRequest 用户查询请求
-	 * @return 查询条件对象（Lambda）
-	 */
-	LambdaQueryWrapper<User> getLambdaQueryWrapper(UserQueryRequest userQueryRequest);
-
-	// endregion 其他方法
 
 	//
 	// /**

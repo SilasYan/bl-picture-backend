@@ -87,9 +87,14 @@ public class UserUpdateRequest implements Serializable {
 	private String shareCode;
 
 	/**
-	 * 邀请用户
+	 * 邀请用户 ID
 	 */
-	private Long inviteUser;
+	private Long inviteUserId;
+
+	/**
+	 * 是否禁用（0-正常, 1-禁用）
+	 */
+	private Integer isDisabled;
 
 	private static final long serialVersionUID = 1L;
 }
